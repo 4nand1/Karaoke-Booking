@@ -1,5 +1,4 @@
 "use client";
-
 import { KaraokeCard } from "./KaraokeCard";
 
 export const KaraokeSection = () => {
@@ -10,7 +9,7 @@ export const KaraokeSection = () => {
       location: "Ulaanbaatar, Seoul Street",
       rating: 4.6,
       price: "30,000₮ / hour",
-      image: "/karaoke1.jpg",
+      image: "/room2.png",
     },
     {
       id: 2,
@@ -18,7 +17,7 @@ export const KaraokeSection = () => {
       location: "Ulaanbaatar, Sukhbaatar District",
       rating: 4.4,
       price: "25,000₮ / hour",
-      image: "/karaoke2.jpg",
+      image: "/room2.png",
     },
     {
       id: 3,
@@ -26,7 +25,7 @@ export const KaraokeSection = () => {
       location: "Ulaanbaatar, Peace Avenue",
       rating: 4.7,
       price: "35,000₮ / hour",
-      image: "/karaoke3.jpg",
+      image: "/room3.png",
     },
     {
       id: 4,
@@ -34,7 +33,7 @@ export const KaraokeSection = () => {
       location: "Ulaanbaatar, Khan-Uul District",
       rating: 4.3,
       price: "28,000₮ / hour",
-      image: "/karaoke4.jpg",
+      image: "/karaoke.jpg",
     },
     {
       id: 5,
@@ -42,7 +41,7 @@ export const KaraokeSection = () => {
       location: "Ulaanbaatar, Bayanzurkh District",
       rating: 4.8,
       price: "40,000₮ / hour",
-      image: "/karaoke5.jpg",
+      image: "/room2.png",
     },
     {
       id: 6,
@@ -50,12 +49,12 @@ export const KaraokeSection = () => {
       location: "Ulaanbaatar, Chingeltei District",
       rating: 4.5,
       price: "32,000₮ / hour",
-      image: "/karaoke6.jpg",
+      image: "/room2.png",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 grid-rows-3">
+    <div className="grid grid-cols-3 grid-rows-2 gap-6">
       {karaoke.map((karaoke) => (
         <KaraokeCard key={karaoke.id} karaoke={karaoke} />
       ))}
