@@ -12,4 +12,4 @@ Home page
 </div>
 </main>
 )
-}
+};
