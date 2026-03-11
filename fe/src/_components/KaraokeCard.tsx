@@ -4,10 +4,12 @@ import Image from "next/image";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, MapPin, Star } from "lucide-react";
+import Link from "next/link";
 
 interface KaraokeCardProps {
   karaoke: {
+    _id: number;
     image: string;
     name: string;
     location: string;
@@ -57,6 +59,26 @@ export const KaraokeCard = ({ karaoke }: KaraokeCardProps) => {
         </Button>
       </CardFooter>
 
-    </Card>
+        <CardContent className="flex flex-col gap-3">
+          <CardTitle className="text-[#c51383] font-bold text-[20px]">
+            {karaoke.name}
+          </CardTitle>
+          <p className="flex gap-2 items-center text-black text-sm">
+            {" "}
+            <MapPin /> {karaoke.location}
+          </p>
+        </CardContent>
+        <CardFooter className="pt-0 flex items-center justify-between ">
+          <p className="flex gap-2 items-center text-black">
+            <Star /> {karaoke.rating}/10
+          </p>
+          <Link href={"/karaoke/" + karaoke._id}>
+          <Button variant={"ghost"} className="text-white bg-[#c51383] ">
+            Захиалах <ArrowRight />
+          </Button>
+          </Link>
+        </CardFooter>
+      </Card>
+    </div>
   );
 };

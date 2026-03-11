@@ -102,7 +102,6 @@ export const CarouselSec = () => {
                 className="object-cover object-center"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
               <div className="absolute bottom-16 left-0 right-0 text-center text-white px-4 z-10">
                 <motion.h3 
                   initial={{ y: 20, opacity: 0 }}

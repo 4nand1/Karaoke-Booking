@@ -2,10 +2,18 @@ import express from "express"
 import cors from "cors"
 import dotenv from "dotenv"
 import { OrderRouter } from "./routes/order.router"
+import { KaraokeRouter } from "./routes/karaokeRoutes"
+import mongoose from "mongoose"
 
 dotenv.config()
 
 const app = express()
+
+const MONGODB_URI = process.env.MONGODB_URI
+
+mongoose.connect(MONGODB_URI!)
+  .then(() => console.log("MongoDB success"))
+  .catch((err) => console.error("MongoDB error", err));
 
 app.use(cors())
 app.use(express.json())
@@ -15,6 +23,7 @@ app.get("/", (req, res) => {
 })
 
 app.use("/orders", OrderRouter);
+app.use("/karaoke", KaraokeRouter);
 
 const PORT = process.env.PORT || 5000
 
