@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
@@ -68,15 +68,15 @@ export const CarouselSec = () => {
   const active = categories[activeIndex]
 
   return (
-    <div className="w-full bg-white py-6 sm:py-10">
-      
+    <div className="w-full bg-gray-50 dark:bg-gray-900 py-6 sm:py-10">
+
       <div className="max-w-[1400px] mx-auto px-6 mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex justify-center items-center">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex justify-center items-center">
           Түгээмэл байршлууд
         </h2>
       </div>
 
-      
+      {/* Carousel */}
       <div className="relative w-full h-[50vh] min-h-[400px] max-h-[600px] overflow-hidden bg-neutral-900">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
@@ -124,7 +124,7 @@ export const CarouselSec = () => {
           </motion.div>
         </AnimatePresence>
 
-        
+        {/* Carousel buttons */}
         <div className="absolute inset-0 flex items-center justify-between px-4 sm:px-10 z-20 pointer-events-none">
           <button
             onClick={() => move(-1)}
@@ -140,7 +140,7 @@ export const CarouselSec = () => {
           </button>
         </div>
 
-       
+        {/* Pagination dots */}
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 z-20">
           {categories.map((_, i) => (
             <button
@@ -157,6 +157,7 @@ export const CarouselSec = () => {
         </div>
       </div>
 
+      {/* Category items */}
       <div className="max-w-[1400px] mx-auto px-6 mt-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {active.items.map((item, i) => (
