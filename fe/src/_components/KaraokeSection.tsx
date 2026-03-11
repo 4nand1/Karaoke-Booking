@@ -4,6 +4,7 @@ import { KaraokeCard } from "./KaraokeCard";
 export const KaraokeSection = () => {
   const karaoke = [
     {
+      _id: 123,
       id: 1,
       name: "Galaxy Karaoke",
       location: "Ulaanbaatar, Seoul Street",
@@ -12,6 +13,7 @@ export const KaraokeSection = () => {
       image: "/room2.png",
     },
     {
+      _id: 124,
       id: 2,
       name: "Star Night Karaoke",
       location: "Ulaanbaatar, Sukhbaatar District",
@@ -20,6 +22,7 @@ export const KaraokeSection = () => {
       image: "/room2.png",
     },
     {
+      _id: 125,
       id: 3,
       name: "Royal Voice Karaoke",
       location: "Ulaanbaatar, Peace Avenue",
@@ -28,6 +31,7 @@ export const KaraokeSection = () => {
       image: "/room3.png",
     },
     {
+      _id: 126,
       id: 4,
       name: "Moonlight Karaoke",
       location: "Ulaanbaatar, Khan-Uul District",
@@ -36,6 +40,7 @@ export const KaraokeSection = () => {
       image: "/karaoke.jpg",
     },
     {
+      _id: 127,
       id: 5,
       name: "VIP Sound Karaoke",
       location: "Ulaanbaatar, Bayanzurkh District",
@@ -44,6 +49,7 @@ export const KaraokeSection = () => {
       image: "/room2.png",
     },
     {
+      _id: 128,
       id: 6,
       name: "Neon Beats Karaoke",
       location: "Ulaanbaatar, Chingeltei District",

@@ -2,9 +2,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { ArrowRight, MapPin, Star } from "lucide-react";
+import Link from "next/link";
 
 interface KaraokeCardProps {
   karaoke: {
+    _id: number;
     image: string;
     name: string;
     location: string;
@@ -37,9 +39,11 @@ export const KaraokeCard = (props: KaraokeCardProps) => {
           <p className="flex gap-2 items-center text-black">
             <Star /> {karaoke.rating}/10
           </p>
+          <Link href={"/karaoke/" + karaoke._id}>
           <Button variant={"ghost"} className="text-white bg-[#c51383] ">
             Захиалах <ArrowRight />
           </Button>
+          </Link>
         </CardFooter>
       </Card>
     </div>
