@@ -4,6 +4,7 @@ import dotenv from "dotenv"
 import { OrderRouter } from "./routes/order.router"
 import { KaraokeRouter } from "./routes/karaokeRoutes"
 import mongoose from "mongoose"
+import { RoomRouter } from "./routes/roomRoutes";
 
 dotenv.config()
 
@@ -24,6 +25,7 @@ app.get("/", (req, res) => {
 
 app.use("/orders", OrderRouter);
 app.use("/karaoke", KaraokeRouter);
+app.use("/karaoke/:id/rooms", RoomRouter);
 
 const PORT = process.env.PORT || 5000
 
