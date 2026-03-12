@@ -4,14 +4,11 @@ import { KaraokeSection } from "@/_components/KaraokeSection";
 
 
 export default function Page() {
-return (
-<main>
-<Navbar />
-<CarouselSec />
-<div className="p-6">
-Home page
-</div>
-<KaraokeSection/>
-</main>
-)
+    return (
+        <main>
+            <Navbar />
+            <CarouselSec />
+            <KaraokeSection />
+        </main>
+    )
 };
