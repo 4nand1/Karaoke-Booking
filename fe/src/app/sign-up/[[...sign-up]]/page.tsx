@@ -1,4 +1,5 @@
 import { SignIn } from "@clerk/nextjs"
+import {  SignUp } from "@clerk/nextjs"
 
 export default function Page() {
   return (
@@ -6,7 +7,10 @@ export default function Page() {
       <SignIn
         path="/sign-in"
         routing="path"
-        signUpUrl="/sign-up"
+        signUpUrl="/sign-up"/>
+      <SignUp
+        path="/sign-up"
+        routing="path"
         forceRedirectUrl="/post-auth"
       />
     </div>
