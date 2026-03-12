@@ -1,21 +1,21 @@
 "use client"
 
-import { useEffect, useState, type FormEvent } from "react"
 import Link from "next/link"
+import { useMemo, useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
-
 import {
   Search,
-  Users,
   Sun,
   Moon,
   Mic,
   LayoutDashboard,
-  LogOut,
+  Store,
+  Users,
   LogIn,
   UserPlus,
-  Store
 } from "lucide-react"
+import { UserButton, useUser } from "@clerk/nextjs"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -27,58 +27,20 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 
-type UserRole = "user" | "admin"
-
-interface AuthUser {
-  id: number
-  name: string
-  email: string
-  role: UserRole
+type PublicMetadata = {
+  role?: "user" | "admin"
 }
 
 export default function Navbar() {
   const router = useRouter()
-  const [theme, setTheme] = useState<"light" | "dark">("light")
+  const { user, isSignedIn } = useUser()
   const [query, setQuery] = useState("")
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [mounted, setMounted] = useState(false)
+  const [theme, setTheme] = useState<"light" | "dark">("light")
 
-  useEffect(() => {
-    setMounted(true)
-
-    const currentTheme =
-      document.documentElement.classList.contains("dark") ? "dark" : "light"
-    setTheme(currentTheme)
-    const loadUser = () => {
-      const storedUser = localStorage.getItem("user")
-      if (!storedUser) {
-        setUser(null)
-        return
-      }
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch {
-        localStorage.removeItem("user")
-        setUser(null)
-      }
-    }
-    loadUser()
-    window.addEventListener("auth-changed", loadUser)
-    window.addEventListener("storage", loadUser)
-    return () => {
-      window.removeEventListener("auth-changed", loadUser)
-      window.removeEventListener("storage", loadUser)
-    }
-  }, [])
-
-  function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "dark"
-    setTheme(nextTheme)
-    document.documentElement.classList.toggle(
-      "dark",
-      nextTheme === "dark"
-    )
-  }
+  const role = useMemo(() => {
+    if (!user) return undefined
+    return (user.publicMetadata as PublicMetadata)?.role
+  }, [user])
 
   function handleSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -86,22 +48,20 @@ export default function Navbar() {
     router.push(`/search?q=${encodeURIComponent(query)}`)
   }
 
-  function handleLogout() {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    window.dispatchEvent(new Event("auth-changed"))
-    setUser(null)
-    router.push("/login")
+  function toggleTheme() {
+    const nextTheme = theme === "dark" ? "light" : "dark"
+    setTheme(nextTheme)
+    document.documentElement.classList.toggle("dark", nextTheme === "dark")
   }
+
   return (
     <header className="w-full border-b bg-background">
       <div className="flex h-14 items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2">
           <Mic className="h-6 w-6" />
-          <span className="text-lg font-semibold">
-            KaraokeNow
-          </span>
+          <span className="text-lg font-semibold">KaraokeNow</span>
         </Link>
+
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -109,46 +69,68 @@ export default function Navbar() {
                 <Search className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end" className="w-64">
-              <form
-                onSubmit={handleSearch}
-                className="flex gap-2 p-2"
-              >
+              <form onSubmit={handleSearch} className="flex gap-2 p-2">
                 <Input
                   placeholder="Search karaoke..."
                   value={query}
-                  onChange={(e) =>
-                    setQuery(e.target.value)
-                  }
+                  onChange={(e) => setQuery(e.target.value)}
                 />
-                <Button type="submit">
-                  Go
-                </Button>
+                <Button type="submit">Go</Button>
               </form>
             </DropdownMenuContent>
           </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Users className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
-                {mounted && user
-                  ? `Hi, ${user.name}`
-                  : "Account"}
+                {isSignedIn ? `Hi, ${user?.firstName || "User"}` : "Account"}
               </DropdownMenuLabel>
+
               <DropdownMenuSeparator />
-              {!mounted ? null : user ? (
+
+              {!isSignedIn ? (
                 <>
-                  {user.role === "admin" ? (
+                  <DropdownMenuItem asChild>
+                    <Link href="/sign-in" className="flex items-center gap-2">
+                      <LogIn className="h-4 w-4" />
+                      Login
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link href="/sign-up" className="flex items-center gap-2">
+                      <UserPlus className="h-4 w-4" />
+                      User signup
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/register-karaoke"
+                      className="flex items-center gap-2"
+                    >
+                      <Store className="h-4 w-4" />
+                      Register karaoke
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  {role === "admin" ? (
                     <DropdownMenuItem asChild>
                       <Link
                         href="/admin/dashboard"
                         className="flex items-center gap-2"
                       >
-                        <LayoutDashboard className="h-4 w-4" />
+                        <Store className="h-4 w-4" />
                         Admin dashboard
                       </Link>
                     </DropdownMenuItem>
@@ -163,52 +145,18 @@ export default function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem
-                    onClick={handleLogout}
-                    className="flex cursor-pointer items-center gap-2"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                  </DropdownMenuItem>
-                </>
-              ) : (
-                <>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/login"
-                      className="flex items-center gap-2"
-                    >
-                      <LogIn className="h-4 w-4" />
-                      Login
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/signup"
-                      className="flex items-center gap-2"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      User signup
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/admin/signup"
-                      className="flex items-center gap-2"
-                    >
-                      <Store className="h-4 w-4" />
-                      Register karaoke
-                    </Link>
-                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
+                  <div className="px-2 py-2">
+                    <UserButton />
+                  </div>
                 </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-          >
+
+          <Button variant="ghost" size="icon" onClick={toggleTheme}>
             {theme === "dark" ? (
               <Sun className="h-5 w-5" />
             ) : (
