@@ -1,5 +1,5 @@
-"use client";
-import { KaraokeCard } from "./KaraokeCard";
+"use client"
+import { KaraokeCard } from "./KaraokeCard"
 
 export const KaraokeSection = () => {
   const karaoke = [
@@ -57,25 +57,21 @@ export const KaraokeSection = () => {
       price: "32,000₮ / hour",
       image: "/room2.png",
     },
-  ];
+  ]
 
   return (
-    <section className="w-full flex justify-center py-16
-                       bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-6xl w-full px-6">
-
-        <h2 className="text-3xl font-bold text-center mb-12
-                       text-gray-900 dark:text-gray-100">
+    <section className="w-full bg-gray-50 py-16 dark:bg-gray-900">
+      <div className="mx-auto w-full max-w-6xl px-6">
+        <h2 className="mb-12 text-center text-3xl font-bold text-gray-900 dark:text-gray-100">
           Popular Karaoke Spots
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 justify-items-center">
-          {karaoke.map(item => (
-            <KaraokeCard key={item.id} karaoke={item} />
+        <div className="grid grid-cols-1 justify-items-center gap-10 sm:grid-cols-2 lg:grid-cols-3">
+          {karaoke.map((item) => (
+            <KaraokeCard key={item._id} karaoke={item} />
           ))}
         </div>
-
       </div>
     </section>
-  );
-};
+  )
+}

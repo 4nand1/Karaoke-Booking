@@ -1,65 +1,60 @@
-"use client"
+import { auth, currentUser } from "@clerk/nextjs/server"
+import { redirect } from "next/navigation"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import type { AuthUser } from "@/types/auth"
-import { getStoredToken, getStoredUser, logoutUser } from "@/lib/auth"
+export default async function DashboardPage() {
+  const { userId } = await auth()
 
-export default function DashboardPage() {
-  const router = useRouter()
-  const [user, setUser] = useState<AuthUser | null>(null)
-
-  useEffect(() => {
-    const token = getStoredToken()
-    const currentUser = getStoredUser()
-
-    if (!token || !currentUser) {
-      router.push("/login")
-      return
-    }
-
-    setUser(currentUser)
-  }, [router])
-
-  function handleLogout() {
-    logoutUser()
-    router.push("/login")
+  if (!userId) {
+    redirect("/sign-in")
   }
 
-  if (!user) {
-    return <div className="p-6">Loading...</div>
-  }
+  const user = await currentUser()
 
   return (
-    <div className="p-6">
-      <h1 className="mb-4 text-2xl font-bold">Dashboard</h1>
+    <main className="mx-auto max-w-4xl p-6">
+      <div className="rounded-2xl border p-6 shadow-sm">
+        <h1 className="text-2xl font-bold">User Dashboard</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Welcome back to KaraokeNow.
+        </p>
 
-      <div className="space-y-2 rounded-xl border p-4">
-        <p>
-          <span className="font-semibold">Name:</span> {user.name}
-        </p>
-        <p>
-          <span className="font-semibold">Email:</span> {user.email}
-        </p>
-        <p>
-          <span className="font-semibold">Role:</span> {user.role}
-        </p>
+        <div className="mt-6 space-y-3">
+          <p>
+            <span className="font-semibold">Name:</span>{" "}
+            {user?.firstName || user?.fullName || "User"}
+          </p>
+          <p>
+            <span className="font-semibold">Email:</span>{" "}
+            {user?.primaryEmailAddress?.emailAddress || "No email found"}
+          </p>
+          <p>
+            <span className="font-semibold">Clerk User ID:</span> {userId}
+          </p>
+        </div>
       </div>
 
-      <div className="mt-4">
-        {user.role === "admin" ? (
-          <p className="text-sm">You are logged in as admin.</p>
-        ) : (
-          <p className="text-sm">You are logged in as user.</p>
-        )}
-      </div>
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border p-4">
+          <h2 className="font-semibold">My Bookings</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            See your upcoming karaoke bookings.
+          </p>
+        </div>
 
-      <button
-        onClick={handleLogout}
-        className="mt-6 rounded-md bg-red-600 px-4 py-2 text-white"
-      >
-        Logout
-      </button>
-    </div>
+        <div className="rounded-2xl border p-4">
+          <h2 className="font-semibold">Booking History</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Review your previous reservations.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border p-4">
+          <h2 className="font-semibold">Payments</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Track completed and pending payments.
+          </p>
+        </div>
+      </div>
+    </main>
   )
 }
