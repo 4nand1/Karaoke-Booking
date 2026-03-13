@@ -1,67 +1,76 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowRight, MapPin, Star } from "lucide-react";
+import { motion } from "framer-motion";
+import { MapPin, Star, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 
 interface KaraokeCardProps {
-  karaoke: {
-    _id: number;
-    image: string;
-    name: string;
-    location: string;
-    rating: number;
-    price?: string;
-  };
+  image: string;
+  name: string;
+  location: string;
+  rating: number;
+  price: string;
+  hours: string;
+  index: number;
 }
 
-export const KaraokeCard = ({ karaoke }: KaraokeCardProps) => {
-  return (
-    <Card
-      className="w-72 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden bg-white dark:bg-gray-800"
-    >
-      <div className="relative w-full h-48">
-        <Image
-          src={karaoke.image}
-          alt={karaoke.name}
-          fill
-          className="object-cover"
-        />
+const KaraokeCard = ({
+  image,
+  name,
+  location,
+  rating,
+  price,
+  hours,
+  index,
+}: KaraokeCardProps) => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.5, delay: index * 0.1 }}
+    className="card-hover group overflow-hidden rounded-2xl bg-card shadow-md"
+  >
+    <div className="relative h-48 overflow-hidden">
+      <img
+        src={image}
+        alt={name}
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+      />
+
+      <div className="absolute inset-0 bg-gradient-to-t from-card/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+      <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-card/90 px-2.5 py-1 text-xs font-semibold text-foreground backdrop-blur-sm">
+        <Star className="h-3 w-3 fill-primary text-primary" />
+        {rating}
+      </div>
+    </div>
+
+    <div className="p-5">
+      <h3 className="font-display text-lg font-semibold text-card-foreground">
+        {name}
+      </h3>
+
+      <div className="mt-2 flex items-center gap-1 text-sm text-muted-foreground">
+        <MapPin className="h-3.5 w-3.5" />
+        {location}
       </div>
 
-      <CardContent className="flex flex-col gap-3">
-        <CardTitle className="text-[#c51383] font-bold text-[20px] dark:text-pink-400">
-          {karaoke.name}
-        </CardTitle>
+      <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+        <Clock className="h-3.5 w-3.5" />
+        {hours}
+      </div>
 
-        <p className="flex gap-2 items-center text-black dark:text-gray-300 text-sm">
-          <MapPin size={16} /> {karaoke.location}
-        </p>
+      <div className="mt-4 flex items-center justify-between">
+        <span className="font-display text-lg font-bold text-primary">
+          {price}
+        </span>
 
-        {karaoke.price && (
-          <p className="text-gray-900 dark:text-gray-100 font-semibold">
-            {karaoke.price}
-          </p>
-        )}
+        <Button variant="neon" size="sm" className="rounded-xl">
+          Book Now
+        </Button>
+      </div>
+    </div>
+  </motion.div>
+);
 
-        <p className="flex gap-2 items-center text-black dark:text-gray-100">
-          <Star size={16} className="text-yellow-400" />
-          {karaoke.rating}/10
-        </p>
-      </CardContent>
-
-      <CardFooter className="pt-0">
-        <Link href={`/karaoke/${karaoke._id}`} className="w-full">
-          <Button
-            variant="ghost"
-            className="w-full text-white bg-[#c51383] dark:bg-pink-600 flex items-center justify-center gap-2"
-          >
-            Захиалах <ArrowRight size={16} />
-          </Button>
-        </Link>
-      </CardFooter>
-    </Card>
-  );
-};
+export default KaraokeCard;
