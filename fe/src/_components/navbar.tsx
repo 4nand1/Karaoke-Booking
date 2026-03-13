@@ -1,10 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState, type FormEvent } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import {
-  Search,
   Sun,
   Moon,
   Mic,
@@ -13,11 +12,11 @@ import {
   Users,
   LogIn,
   UserPlus,
+  MapPin,
 } from "lucide-react"
 import { UserButton, useUser } from "@clerk/nextjs"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -32,64 +31,83 @@ type PublicMetadata = {
 }
 
 export default function Navbar() {
-  const router = useRouter()
   const { user, isSignedIn } = useUser()
-  const [query, setQuery] = useState("")
-  const [theme, setTheme] = useState<"light" | "dark">("light")
+
+  const [dark, setDark] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
 
   const role = useMemo(() => {
     if (!user) return undefined
     return (user.publicMetadata as PublicMetadata)?.role
   }, [user])
 
-  function handleSearch(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!query.trim()) return
-    router.push(`/search?q=${encodeURIComponent(query)}`)
-  }
+  useEffect(() => {
+    setMounted(true)
 
-  function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "dark"
-    setTheme(nextTheme)
-    document.documentElement.classList.toggle("dark", nextTheme === "dark")
-  }
+    const savedTheme = localStorage.getItem("theme")
+
+    if (savedTheme === "dark") {
+      setDark(true)
+      document.documentElement.classList.add("dark")
+    } else if (savedTheme === "light") {
+      setDark(false)
+      document.documentElement.classList.remove("dark")
+    } else {
+      const systemPrefersDark =
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+      setDark(systemPrefersDark)
+      document.documentElement.classList.toggle("dark", systemPrefersDark)
+    }
+  }, [])
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 50)
+    window.addEventListener("scroll", onScroll)
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
+    document.documentElement.classList.toggle("dark", dark)
+    localStorage.setItem("theme", dark ? "dark" : "light")
+  }, [dark, mounted])
 
   return (
-    <header className="w-full border-b bg-background">
-      <div className="flex h-14 items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <Mic className="h-6 w-6" />
-          <span className="text-lg font-semibold">KaraokeNow</span>
-        </Link>
+    <motion.nav
+      className={`fixed left-0 right-0 top-0 z-50 transition-all duration-500 ${
+        scrolled ? "glass shadow-lg" : "bg-transparent"
+      }`}
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
+      <div className="container mx-auto flex items-center justify-between px-6 py-4">
+        <motion.div whileHover={{ scale: 1.05 }}>
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
+              <Mic className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <span className="text-xl font-bold text-foreground">
+              Karaoke<span className="text-primary">Now</span>
+            </span>
+          </Link>
+        </motion.div>
 
         <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Search className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-64">
-              <form onSubmit={handleSearch} className="flex gap-2 p-2">
-                <Input
-                  placeholder="Search karaoke..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-                <Button type="submit">Go</Button>
-              </form>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button variant="glass" size="icon" className="rounded-xl" type="button">
+            <MapPin className="h-5 w-5 text-foreground" />
+          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Users className="h-5 w-5" />
+              <Button variant="glass" size="icon" className="rounded-xl" type="button">
+                <Users className="h-5 w-5 text-foreground" />
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 rounded-xl">
               <DropdownMenuLabel>
                 {isSignedIn ? `Hi, ${user?.firstName || "User"}` : "Account"}
               </DropdownMenuLabel>
@@ -156,15 +174,31 @@ export default function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
+          <Button
+            variant="glass"
+            size="icon"
+            className="rounded-xl"
+            onClick={() => setDark((prev) => !prev)}
+            type="button"
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={dark ? "moon" : "sun"}
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {dark ? (
+                  <Sun className="h-5 w-5 text-foreground" />
+                ) : (
+                  <Moon className="h-5 w-5 text-foreground" />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </Button>
         </div>
       </div>
-    </header>
+    </motion.nav>
   )
 }
