@@ -1,4 +1,5 @@
-import { Schema, model, models } from "mongoose"
+import { Schema, Types, model } from "mongoose";
+import { IRoom, roomSchema } from "./Room";
 
 export interface IKaraoke {
   ownerClerkUserId: string
@@ -12,9 +13,11 @@ export interface IKaraoke {
   latitude?: number | null
   longitude?: number | null
   image?: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+  createdAt: Date;
+  updatedAt: Date;
+  rooms: Types.DocumentArray<IRoom>;
+  }[]
+
 
 const karaokeSchema = new Schema<IKaraoke>(
   {
@@ -29,9 +32,9 @@ const karaokeSchema = new Schema<IKaraoke>(
     latitude: { type: Number, default: null },
     longitude: { type: Number, default: null },
     image: { type: String, default: null },
+    rooms: [roomSchema],
   },
   { timestamps: true }
 )
 
-export const Karaoke =
-  models.Karaoke || model<IKaraoke>("Karaoke", karaokeSchema)
+export const KaraokeModel = model("Karaoke", karaokeSchema);

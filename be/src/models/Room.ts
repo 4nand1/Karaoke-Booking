@@ -11,4 +11,13 @@ export const roomSchema = new Schema({
   isAvailable: { type: Boolean, default: true },
 });
 
+export interface IRoom {
+  name: string
+  type: "VIP" | "Medium" | "Small"
+  price: number
+  capacity: number
+  image: string
+  isAvailable: boolean
+}
+
 export const RoomModel = model("Room", roomSchema);

@@ -1,16 +1,24 @@
 import type { RequestHandler } from "express"
-import { Karaoke } from "../../models/Karoake"
+import { KaraokeModel } from "../../models/Karoake"
 
-export const getKaraoke: RequestHandler = async (req, res) => {
+export const createKaraoke: RequestHandler = async (req, res) => {
   try {
-    const karaokes = await Karaoke.find()
+    const { karaokeName, address, city, phone, description, openingTime, closingTime, ownerClerkUserId } = req.body
 
-    res.status(200).json(karaokes)
-  } catch (error) {
-    console.error("getKaraoke error:", error)
-
-    res.status(500).json({
-      message: "Failed to fetch karaokes",
+    const karaoke = await KaraokeModel.create({
+      ownerClerkUserId,
+      name: karaokeName,
+      address,
+      city,
+      phone,
+      description,
+      openingTime,
+      closingTime,
     })
+
+    res.status(201).json(karaoke)
+  } catch (error) {
+    console.error("createKaraoke error:", error)
+    res.status(500).json({ message: "Failed to create karaoke" })
   }
 }
