@@ -1,31 +1,35 @@
-import dotenv from "dotenv"
-dotenv.config()
+import dotenv from "dotenv";
+dotenv.config();
 
-import express from "express"
-import cors from "cors"
-import { clerkMiddleware } from "@clerk/express"
-import { connectDB } from "./config/db"
-import authRoutes from "./routes/auth.routes"
-import onboardingRoutes from "./routes/onboarding.routes"
+import express from "express";
+import cors from "cors";
+import { clerkMiddleware } from "@clerk/express";
+import { connectDB } from "./src/config/db";
+import authRoutes from "./src/routes/auth.routes";
+import onboardingRoutes from "./src/routes/onboarding.routes";
+import { CategoryRouter } from "./src/routes/category.router";
+import { ItemRouter } from "./src/routes/menuRouter";
 
-const app = express()
+const app = express();
 
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
     credentials: true,
-  })
-)
-app.use(express.json())
-app.use(clerkMiddleware())
+  }),
+);
+app.use(express.json());
+app.use(clerkMiddleware());
 
-app.use("/api", authRoutes)
-app.use("/api/onboarding", onboardingRoutes)
+app.use("/api", authRoutes);
+app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/categories", CategoryRouter);
+app.use("/api/items", ItemRouter);
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`)
-  })
-})
+    console.log(`Server running on port ${PORT}`);
+  });
+});

@@ -147,7 +147,7 @@ const MapPreview = () => {
           />
         </div>
 
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
+        <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-accent/5" />
 
         <div className="relative z-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {nearbyKaraokes.length > 0 ? (
