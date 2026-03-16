@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { clerkClient, getAuth } from "@clerk/express"
 import { UserProfile } from "../models/UserProfile"
-import { Karaoke } from "../models/Karoake"
+import { Karaoke } from "../models/Karaoke"
 
 const router = Router()
 

@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import { KaraokeModel } from "../../models/Karoake";
+import { KaraokeModel } from "../../models/Karaoke";
 
 export const updateKaraoke: RequestHandler = async (req, res) => {
   const { _id } = req.params;
