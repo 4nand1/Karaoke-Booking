@@ -1,12 +1,12 @@
 "use client";
 
-import Navbar from "@/_components/navbar";
-import HeroCarousel from "@/_components/HeroCarousel";
-import FilterBar from "@/_components/FilterBar";
-import KaraokeCard from "@/_components/KaraokeCard";
-import MapPreview from "@/_components/MapPreview";
-import CustomerReviews from "@/_components/CustomerReviews";
-import Footer from "@/_components/Footer";
+import Navbar from "@/_components/client/navbar";
+import HeroCarousel from "@/_components/client/HeroCarousel";
+import FilterBar from "@/_components/client/FilterBar";
+import KaraokeCard from "@/_components/client/KaraokeCard";
+import MapPreview from "@/_components/client/MapPreview";
+import CustomerReviews from "@/_components/client/CustomerReviews";
+import Footer from "@/_components/client/Footer";
 import { motion } from "framer-motion";
 
 const karaokeSpots = [

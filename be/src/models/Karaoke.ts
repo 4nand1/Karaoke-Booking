@@ -38,6 +38,6 @@ const karaokeSchema = new Schema<IKaraoke>(
      menu: [menuItemSchema],
   },
   { timestamps: true }
-)
+);
 
 export const KaraokeModel = model("Karaoke", karaokeSchema);
