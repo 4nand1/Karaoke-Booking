@@ -29,7 +29,7 @@ app.use("/karaoke", KaraokeRouter);
 app.use("/karaoke/:id/rooms", RoomRouter);
 app.use("/karaoke/:id/menu", MenuRouter);
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 9000
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
