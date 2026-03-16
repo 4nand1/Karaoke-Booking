@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import { KaraokeModel } from "../../models/Karoake";
+import { KaraokeModel } from "../../models/Karaoke";
 
 export const deleteMenu: RequestHandler = async (req, res) => {
   const { id } = req.params;
