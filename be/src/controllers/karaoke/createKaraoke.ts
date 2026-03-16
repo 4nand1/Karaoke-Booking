@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express"
-import { KaraokeModel } from "../../models/Karoake"
+import { KaraokeModel } from "../../models/Karaoke"
 
 export const createKaraoke: RequestHandler = async (req, res) => {
   try {
