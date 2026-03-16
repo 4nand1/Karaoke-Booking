@@ -68,7 +68,7 @@ export default function RegisterKaraokePage() {
         throw new Error(data.message || "Registration failed")
       }
 
-      router.push(`/admin/karaoke/${data._id}/rooms`)
+      router.push(`/admin`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed")
     } finally {
