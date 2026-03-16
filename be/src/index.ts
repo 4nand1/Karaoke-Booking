@@ -28,6 +28,7 @@ app.get("/", (req, res) => {
 
 app.use("/orders", OrderRouter);
 app.use("/karaoke", KaraokeRouter);
+app.use("/orders", OrderRouter);
 app.use("/karaoke/:id/rooms", RoomRouter);
 app.use("/categories", CategoryRouter);
 app.use("/items", ItemRouter);
