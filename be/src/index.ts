@@ -8,9 +8,9 @@ import { RoomRouter } from "./routes/roomRoutes";
 import { ItemRouter } from "./routes/menuRouter";
 import { CategoryRouter } from "./routes/category.router";
 
-dotenv.config();
+dotenv.config()
 
-const app = express();
+const app = express()
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -29,6 +29,7 @@ app.get("/", (req, res) => {
 app.use("/orders", OrderRouter);
 app.use("/karaoke", KaraokeRouter);
 app.use("/orders", OrderRouter);
+app.use("/karaoke", KaraokeRouter);
 app.use("/karaoke/:id/rooms", RoomRouter);
 app.use("/categories", CategoryRouter);
 app.use("/items", ItemRouter);
