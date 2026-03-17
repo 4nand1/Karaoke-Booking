@@ -81,7 +81,7 @@ export const CreateItemDialog = () => {
       const token = localStorage.getItem("accessToken");
 
       await api.post(
-        "/foods/create",
+        "/items/create",
         {
           name: values.name,
           price: parseFloat(values.price),
