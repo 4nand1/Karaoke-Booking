@@ -6,6 +6,7 @@ import { KaraokeRouter } from "./routes/karaokeRoutes"
 import mongoose from "mongoose"
 import { RoomRouter } from "./routes/roomRoutes";
 import { MenuRouter } from "./routes/menuRoutes";
+import { ItemRouter } from "./routes/menuRouter"
 
 dotenv.config()
 
@@ -27,7 +28,8 @@ app.get("/", (req, res) => {
 app.use("/orders", OrderRouter);
 app.use("/karaoke", KaraokeRouter);
 app.use("/karaoke/:id/rooms", RoomRouter);
-app.use("/karaoke/:id/menu", MenuRouter);
+app.use ("/categories", MenuRouter)
+app.use("/items", ItemRouter)
 
 const PORT = process.env.PORT || 9000
 
