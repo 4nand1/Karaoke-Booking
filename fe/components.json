@@ -21,5 +21,6 @@
   },
   "registries": {
     "@react-bits": "https://reactbits.dev/r/{name}.json"
+    "@shadcn-map": "http://shadcn-map.vercel.app/r/{name}.json"
   }
 }

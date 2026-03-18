@@ -3,7 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { MapPin } from "lucide-react";
+import type { LatLngExpression } from "leaflet";
 import { getDistanceKm } from "@/lib/distance";
+import {
+  Map,
+  MapMarker,
+  MapPopup,
+  MapTileLayer,
+  MapZoomControl,
+} from "@/components/ui/map";
 
 type Karaoke = {
   _id: string;
@@ -36,11 +44,12 @@ const MapPreview = () => {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
   const [locationError, setLocationError] = useState("");
+  const [selectedKaraokeId, setSelectedKaraokeId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchKaraokes() {
       try {
-        const res = await fetch("http://localhost:9000/karaoke");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/karaoke`);
         const data = await res.json();
 
         if (!res.ok) {
@@ -48,7 +57,7 @@ const MapPreview = () => {
         }
 
         setKaraokes(data);
-      } catch (error) {
+      } catch {
         setFetchError("Failed to load karaoke locations");
       } finally {
         setLoading(false);
@@ -99,6 +108,24 @@ const MapPreview = () => {
       .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
   }, [karaokes, userLocation]);
 
+  const mapCenter = useMemo<LatLngExpression>(() => {
+    if (userLocation) {
+      return [userLocation.latitude, userLocation.longitude];
+    }
+
+    const first = nearbyKaraokes.find(
+      (karaoke) =>
+        typeof karaoke.latitude === "number" &&
+        typeof karaoke.longitude === "number"
+    );
+
+    if (first) {
+      return [first.latitude as number, first.longitude as number];
+    }
+
+    return [47.9184, 106.9177];
+  }, [userLocation, nearbyKaraokes]);
+
   return (
     <section className="container mx-auto px-6 py-16">
       <motion.div
@@ -147,46 +174,77 @@ const MapPreview = () => {
           />
         </div>
 
-        <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-accent/5" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
 
-        <div className="relative z-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="relative z-10">
           {nearbyKaraokes.length > 0 ? (
-            nearbyKaraokes.map((karaoke) => (
-              <div
-                key={karaoke._id}
-                className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-1">
-                    <MapPin className="h-5 w-5 fill-primary text-primary" />
-                  </div>
+            <div className="h-[360px] w-full overflow-hidden rounded-3xl">
+              <Map center={mapCenter} zoom={13} className="h-full w-full">
+                <MapTileLayer />
+                <MapZoomControl />
 
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-lg font-semibold text-white">
-                      {karaoke.name}
-                    </h3>
+                {userLocation && (
+                  <MapMarker position={[userLocation.latitude, userLocation.longitude]}>
+                    <div className="h-4 w-4 rounded-full border-2 border-white bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.7)]" />
+                  </MapMarker>
+                )}
 
-                    <p className="mt-1 text-sm text-gray-300">
-                      {karaoke.address}, {karaoke.city}
-                    </p>
+                {nearbyKaraokes.map((karaoke) => {
+                  if (
+                    typeof karaoke.latitude !== "number" ||
+                    typeof karaoke.longitude !== "number"
+                  ) {
+                    return null;
+                  }
 
-                    <p className="mt-1 text-sm text-gray-400">
-                      {karaoke.phone}
-                    </p>
+                  return (
+                    <MapMarker
+                      key={karaoke._id}
+                      position={[karaoke.latitude, karaoke.longitude]}
+                    >
+                      <div className="flex flex-col items-center">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedKaraokeId((prev) =>
+                              prev === karaoke._id ? null : karaoke._id
+                            )
+                          }
+                          className="flex flex-col items-center"
+                        >
+                          <MapPin className="h-8 w-8 fill-primary text-primary drop-shadow-[0_0_10px_rgba(236,72,153,0.8)]" />
+                          <span className="mt-1 rounded-full bg-black/70 px-2 py-1 text-xs text-white backdrop-blur-sm">
+                            {karaoke.name}
+                          </span>
+                        </button>
 
-                    <p className="mt-1 text-sm text-gray-400">
-                      {karaoke.openingTime} - {karaoke.closingTime}
-                    </p>
-
-                    {typeof karaoke.distance === "number" && (
-                      <p className="mt-3 text-sm font-medium text-pink-400">
-                        {karaoke.distance.toFixed(1)} km away
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))
+                        {selectedKaraokeId === karaoke._id && (
+                          <MapPopup>
+                            <div className="min-w-[220px] text-sm">
+                              <h3 className="text-base font-semibold">
+                                {karaoke.name}
+                              </h3>
+                              <p className="mt-2">
+                                {karaoke.address}, {karaoke.city}
+                              </p>
+                              <p className="mt-1">{karaoke.phone}</p>
+                              <p className="mt-1">
+                                {karaoke.openingTime} - {karaoke.closingTime}
+                              </p>
+                              {typeof karaoke.distance === "number" && (
+                                <p className="mt-3 font-medium text-pink-400">
+                                  {karaoke.distance.toFixed(1)} km away
+                                </p>
+                              )}
+                            </div>
+                          </MapPopup>
+                        )}
+                      </div>
+                    </MapMarker>
+                  );
+                })}
+              </Map>
+            </div>
           ) : (
             !loading && (
               <p className="text-sm text-muted-foreground">
