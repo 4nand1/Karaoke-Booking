@@ -296,11 +296,11 @@ function MenuTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: () => vo
     setLoading(true)
     try {
       const token = await getToken()
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/karaoke/${karaoke._id}/menu`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ items: [{ ...form, price: Number(form.price) }] }),
-      })
+     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/karaoke/${karaoke._id}/menu`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+  body: JSON.stringify({ items: [{ ...form, price: Number(form.price) }] }),
+})
       if (res.ok) {
         setAdding(false)
         setForm({ name: "", category: "food", price: "", description: "", image: "" })
@@ -312,10 +312,10 @@ function MenuTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: () => vo
   async function handleDelete(itemId: string) {
     if (!confirm("Устгахдаа итгэлтэй байна уу?")) return
     const token = await getToken()
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/karaoke/${karaoke._id}/menu/${itemId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    })
+  await fetch(`${process.env.NEXT_PUBLIC_API_URL}/karaoke/${karaoke._id}/menu/${itemId}`, {
+  method: "DELETE",
+  headers: { Authorization: `Bearer ${token}` },
+})
     onRefresh()
   }
 

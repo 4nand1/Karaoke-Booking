@@ -1,16 +1,19 @@
-import { Schema, model } from "mongoose";
+import { Schema } from "mongoose";
 
-const itemSchema = new Schema(
-  {
-    name: { type: String, required: true },
-    price: { type: Number, required: true },
-    categoryId: {
-      type: Schema.Types.ObjectId,
-      ref: "Category",
-      required: true,
-    },
-  },
-  { timestamps: true },
-);
+export interface IMenuItem {
+  name: string
+  category: "food" | "drink" | "set"
+  price: number
+  description?: string
+  image?: string
+  isAvailable: boolean
+}
 
-export const ItemModel = model("Item", itemSchema);
+export const menuItemSchema = new Schema<IMenuItem>({
+  name: { type: String, required: true },
+  category: { type: String, enum: ["food", "drink", "set"], required: true },
+  price: { type: Number, required: true },
+  description: { type: String, default: null },
+  image: { type: String, default: null },
+  isAvailable: { type: Boolean, default: true },
+})
