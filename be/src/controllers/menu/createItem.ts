@@ -1,13 +1,22 @@
 import type { RequestHandler } from "express";
-import { ItemModel } from "../../models/MenuItem";
+import { KaraokeModel } from "../../models/Karaoke";
 
 export const createItem: RequestHandler = async (req, res) => {
-  const body = req.body;
+  try {
+    const { id } = req.params;
+    const items = req.body.items;
 
-  const item = await ItemModel.create({
-    name: body.name,
-    price: body.price,
-    categoryId: body.categoryId,
-  });
-  res.status(201).json(item);
+    const karaoke = await KaraokeModel.findById(id);
+    if (!karaoke) {
+      res.status(404).json({ message: "Karaoke not found" });
+      return;
+    }
+
+    karaoke.menu.push(...items);
+    await karaoke.save();
+
+    res.status(201).json(karaoke.menu);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to add menu items" });
+  }
 };

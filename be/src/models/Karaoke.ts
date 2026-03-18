@@ -1,6 +1,7 @@
 import { Schema, Types, model } from "mongoose";
 import { IRoom, roomSchema } from "./Room";
-import { ItemModel, itemSchema } from "./MenuItem";
+import {  IMenuItem, menuItemSchema } from "./MenuItem";
+
 export interface IKaraoke {
   ownerClerkUserId: string
   name: string
@@ -13,16 +14,15 @@ export interface IKaraoke {
   latitude?: number | null
   longitude?: number | null
   image?: string | null
-  createdAt: Date;
-  updatedAt: Date;
-  rooms: Types.DocumentArray<IRoom>;
-  menu: typeof ItemModel[]
+  createdAt: Date
+  updatedAt: Date
+  rooms: Types.DocumentArray<IRoom>
+  menu: Types.DocumentArray<IMenuItem>
 }
-
 
 const karaokeSchema = new Schema<IKaraoke>(
   {
-  ownerClerkUserId: { type: String, required: true, index: true },
+    ownerClerkUserId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     address: { type: String, required: true },
     city: { type: String, required: true },
@@ -34,9 +34,9 @@ const karaokeSchema = new Schema<IKaraoke>(
     longitude: { type: Number, default: null },
     image: { type: String, default: null },
     rooms: [roomSchema],
-     menu: [itemSchema],
+    menu: [menuItemSchema],
   },
   { timestamps: true }
-);
+)
 
-export const KaraokeModel = model("Karaoke", karaokeSchema);
+export const KaraokeModel = model("Karaoke", karaokeSchema)

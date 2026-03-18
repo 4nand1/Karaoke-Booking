@@ -4,11 +4,11 @@ import { createItem } from "../controllers/menu/createItem";
 import { deleteItem } from "../controllers/menu/deleteItem";
 import { updateItem } from "../controllers/menu/updateItem";
 
-const ItemRouter = Router();
+const MenuRouter = Router({ mergeParams: true });
 
-ItemRouter.get("/", getItems)
-  .post("/create", createItem)
-  .delete("/:id", deleteItem)
-  .put("/:_id", updateItem);
+MenuRouter.get("/", getItems)
+  .post("/", createItem)
+  .delete("/:itemId", deleteItem)
+  .put("/:itemId", updateItem);
 
-export { ItemRouter };
+export { MenuRouter };

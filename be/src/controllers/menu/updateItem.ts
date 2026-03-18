@@ -1,17 +1,29 @@
-import { RequestHandler } from "express";
-import { ItemModel } from "../../models/MenuItem";
+import type { RequestHandler } from "express";
+import { KaraokeModel } from "../../models/Karaoke";
 
 export const updateItem: RequestHandler = async (req, res) => {
-  const { _id } = req.params;
-  const body = req.body;
+  try {
+    const id = req.params.id as string;
+    const itemId = req.params.itemId as string;
+    const body = req.body;
 
-  console.log(body);
+    const karaoke = await KaraokeModel.findById(id);
+    if (!karaoke) {
+      res.status(404).json({ message: "Karaoke not found" });
+      return;
+    }
 
-  const item = await ItemModel.findByIdAndUpdate(_id, body, { new: true });
+    const item = karaoke.menu.id(itemId);
+    if (!item) {
+      res.status(404).json({ message: "Item not found" });
+      return;
+    }
 
-  if (!item) {
-    return res.status(404).json({ message: "Item not found" });
+    Object.assign(item, body);
+    await karaoke.save();
+
+    res.status(200).json(item);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update item" });
   }
-
-  res.status(200).json(item);
 };
