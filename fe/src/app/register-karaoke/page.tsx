@@ -86,9 +86,9 @@ export default function RegisterKaraokePage() {
 
   return (
     <main className="relative min-h-screen w-full bg-[#0a0118]">
-     <div className="fixed inset-0 z-0 bg-[#0a0118]">
-  <Iridescence color={[0.5, 0.6, 0.8]} mouseReact amplitude={0.1} speed={1} />
-</div>
+      <div className="fixed inset-0 z-0">
+        <Iridescence color={[0.5, 0.6, 0.8]} mouseReact amplitude={0.1} speed={1} />
+      </div>
 
       <div className="relative z-10 flex min-h-screen w-full items-center justify-center p-6 py-20">
         <motion.div
