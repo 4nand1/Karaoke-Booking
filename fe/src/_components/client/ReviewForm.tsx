@@ -17,6 +17,40 @@ interface Review {
   createdAt?: string;
 }
 
+type ReviewApiResponse = {
+  _id?: string;
+  id?: number;
+  name?: string;
+  rating?: number;
+  text?: string;
+  venue?: string;
+  createdAt?: string;
+};
+
+const formatReview = (review: ReviewApiResponse): Review => {
+  const safeName = review.name?.trim() || "Anonymous";
+  const safeCreatedAt = review.createdAt ? new Date(review.createdAt) : null;
+  const timestamp =
+    safeCreatedAt && !Number.isNaN(safeCreatedAt.getTime())
+      ? safeCreatedAt.toLocaleDateString()
+      : "just now";
+
+  return {
+    _id: review._id,
+    id: review.id,
+    name: safeName,
+    avatar: safeName.charAt(0).toUpperCase(),
+    rating:
+      typeof review.rating === "number" && review.rating >= 1 && review.rating <= 5
+        ? review.rating
+        : 5,
+    text: review.text?.trim() || "",
+    venue: review.venue?.trim() || "Unknown venue",
+    timestamp,
+    createdAt: review.createdAt,
+  };
+};
+
 const ReviewForm = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,25 +76,19 @@ const ReviewForm = () => {
       // Try to fetch from backend
       try {
         const response = await api.get("/reviews");
-        const reviewsData = response.data.data || [];
-        
-        // Transform the data to include timestamp
-        const transformedReviews = reviewsData.map((review: any) => ({
-          ...review,
-          _id: review._id,
-          avatar: review.name.charAt(0).toUpperCase(),
-          timestamp: new Date(review.createdAt).toLocaleDateString(),
-        }));
-        
+        const reviewsData = Array.isArray(response.data?.data) ? response.data.data : [];
+        const transformedReviews = reviewsData.map(formatReview);
+
         setReviews(transformedReviews);
         // Save to localStorage as backup
         localStorage.setItem("karaokeReviews", JSON.stringify(transformedReviews));
-      } catch (apiError) {
+      } catch {
         // Fallback to localStorage if API fails
         console.log("API unavailable, using localStorage");
         const savedReviews = localStorage.getItem("karaokeReviews");
         if (savedReviews) {
-          setReviews(JSON.parse(savedReviews));
+          const parsedReviews = JSON.parse(savedReviews);
+          setReviews(Array.isArray(parsedReviews) ? parsedReviews.map(formatReview) : []);
         }
       }
     } catch (error) {
@@ -75,7 +103,7 @@ const ReviewForm = () => {
       // Try to delete from backend
       try {
         await api.delete(`/reviews/${id}`);
-      } catch (apiError) {
+      } catch {
         console.log("API unavailable, using localStorage");
       }
       // Remove from local state - check both _id and id properties
@@ -114,21 +142,15 @@ const ReviewForm = () => {
       // Try to save to backend
       try {
         const response = await api.post("/reviews", newReviewData);
-        newReview = {
-          ...response.data.data,
-          _id: response.data.data._id,
-          avatar: formData.name.charAt(0).toUpperCase(),
-          timestamp: "just now",
-        };
-      } catch (apiError) {
+        newReview = formatReview(response.data?.data ?? newReviewData);
+      } catch {
         // Fallback: create review locally
         console.log("API unavailable, saving to localStorage");
-        newReview = {
+        newReview = formatReview({
           _id: Date.now().toString(),
-          avatar: formData.name.charAt(0).toUpperCase(),
-          timestamp: "just now",
           ...newReviewData,
-        };
+          createdAt: new Date().toISOString(),
+        });
       }
 
       // Update state and localStorage
