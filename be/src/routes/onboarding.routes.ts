@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { clerkClient, getAuth } from "@clerk/express"
 import { UserProfile } from "../models/UserProfile"
-import { Karaoke } from "../models/Karaoke"
+import { KaraokeModel } from "../models/Karaoke"
 
 const router = Router()
 
@@ -47,7 +47,7 @@ router.post("/karaoke", async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" })
     }
 
-    const existing = await Karaoke.findOne({ ownerClerkUserId: userId })
+    const existing = await KaraokeModel.findOne({ ownerClerkUserId: userId })
     if (existing) {
       return res.status(409).json({ message: "Karaoke already registered" })
     }
@@ -61,7 +61,7 @@ router.post("/karaoke", async (req, res) => {
     const lastName = clerkUser.lastName || ""
     const fullName = `${firstName} ${lastName}`.trim() || "Owner"
 
-    const karaoke = await Karaoke.create({
+    const karaoke = await KaraokeModel.create({
       ownerClerkUserId: userId,
       name: karaokeName,
       address,

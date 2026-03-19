@@ -6,6 +6,7 @@ import FilterBar, { type FilterValues } from "@/_components/client/FilterBar";
 import KaraokeCard from "@/_components/client/KaraokeCard";
 import MapPreview from "@/_components/client/MapPreview";
 import CustomerReviews from "@/_components/client/CustomerReviews";
+import ReviewForm from "@/_components/client/ReviewForm";
 import Footer from "@/_components/client/Footer";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
@@ -194,8 +195,9 @@ const Index = () => {
           ))}
         </div>
       </section>
-
-      <CustomerReviews />
+{/* 
+      <CustomerReviews /> */}
+      <ReviewForm />
       <Footer />
     </div>
   );
