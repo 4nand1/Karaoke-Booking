@@ -18,9 +18,6 @@ type KaraokeForm = {
   openingHours: string
   openingTime: string
   closingTime: string
-  roomTypes: string
-  pricePerHour: string
-  capacity: string
   amenities: string
   images: string
   rulesPolicies: string
@@ -44,9 +41,6 @@ export default function RegisterKaraokePage() {
     openingHours: "",
     openingTime: "",
     closingTime: "",
-    roomTypes: "",
-    pricePerHour: "",
-    capacity: "",
     amenities: "",
     images: "",
     rulesPolicies: "",
@@ -56,7 +50,6 @@ export default function RegisterKaraokePage() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
 
   function handleChange(
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -69,7 +62,6 @@ export default function RegisterKaraokePage() {
     e.preventDefault()
     setLoading(true)
     setError("")
-    setSuccess("")
 
     try {
       if (!isSignedIn) {
@@ -96,22 +88,13 @@ export default function RegisterKaraokePage() {
             karaokeName: form.karaokeName,
             ownerFullName: form.ownerFullName || user?.fullName || "",
             phoneNumber: form.phoneNumber,
-            email:
-              form.email ||
-              user?.primaryEmailAddress?.emailAddress ||
-              "",
+            email: form.email || user?.primaryEmailAddress?.emailAddress || "",
             address: form.address,
             city: form.city,
             description: form.description,
             openingHours: form.openingHours,
             openingTime: form.openingTime,
             closingTime: form.closingTime,
-            roomTypes: form.roomTypes
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean),
-            pricePerHour: form.pricePerHour ? Number(form.pricePerHour) : null,
-            capacity: form.capacity ? Number(form.capacity) : null,
             amenities: form.amenities
               .split(",")
               .map((item) => item.trim())
@@ -133,8 +116,12 @@ export default function RegisterKaraokePage() {
         throw new Error(data.message || "Бүртгэл амжилтгүй боллоо")
       }
 
-      setSuccess("Караоке бүртгэл амжилттай илгээгдлээ. Баталгаажуулалт хүлээгдэж байна.")
-      router.push("/")
+      const karaokeId = data?.karaoke?._id
+      if (!karaokeId) {
+        throw new Error("Karaoke created but karaoke ID was not returned")
+      }
+
+      router.push(`/admin/rooms/new?karaokeId=${encodeURIComponent(karaokeId)}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Алдаа гарлаа")
     } finally {
@@ -166,7 +153,7 @@ export default function RegisterKaraokePage() {
         >
           <div className="mb-8 text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-purple-400">
-              <Star size={12} fill="currentColor" /> Your Karaoke, Your Rules
+              <Star size={12} fill="currentColor" /> Register your karaoke first
             </div>
             <h1 className="text-4xl font-black text-white md:text-5xl">
               Register <span className="text-purple-500">Karaoke</span>
@@ -299,46 +286,6 @@ export default function RegisterKaraokePage() {
               </div>
 
               <div>
-                <label className={labelStyle}>Room types</label>
-                <input
-                  name="roomTypes"
-                  value={form.roomTypes}
-                  onChange={handleChange}
-                  placeholder="Small room, VIP room"
-                  className={inputStyle}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className={labelStyle}>Price per hour</label>
-                <input
-                  name="pricePerHour"
-                  type="number"
-                  min="0"
-                  value={form.pricePerHour}
-                  onChange={handleChange}
-                  placeholder="50000"
-                  className={inputStyle}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className={labelStyle}>Capacity</label>
-                <input
-                  name="capacity"
-                  type="number"
-                  min="1"
-                  value={form.capacity}
-                  onChange={handleChange}
-                  placeholder="10"
-                  className={inputStyle}
-                  required
-                />
-              </div>
-
-              <div>
                 <label className={labelStyle}>Amenities</label>
                 <input
                   name="amenities"
@@ -404,18 +351,12 @@ export default function RegisterKaraokePage() {
               </p>
             ) : null}
 
-            {success ? (
-              <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 py-3 text-center text-xs text-emerald-400">
-                {success}
-              </p>
-            ) : null}
-
             <button
               type="submit"
               disabled={loading}
               className="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 py-4 font-black uppercase tracking-widest text-white shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              {loading ? "Бүртгэж байна..." : "Бүртгэх →"}
+              {loading ? "Бүртгэж байна..." : "Дараах → Өрөө бүртгэх"}
             </button>
           </form>
         </motion.div>

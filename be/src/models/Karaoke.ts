@@ -16,9 +16,6 @@ export interface IKaraoke {
   openingHours?: string
   openingTime: string
   closingTime: string
-  roomTypes?: string[]
-  pricePerHour?: number | null
-  capacity?: number | null
   amenities?: string[]
   images?: string[]
   rulesPolicies?: string
@@ -45,9 +42,6 @@ const karaokeSchema = new Schema<IKaraoke>(
     openingHours: { type: String, default: "" },
     openingTime: { type: String, required: true },
     closingTime: { type: String, required: true },
-    roomTypes: [{ type: String }],
-    pricePerHour: { type: Number, default: null },
-    capacity: { type: Number, default: null },
     amenities: [{ type: String }],
     images: [{ type: String }],
     rulesPolicies: { type: String, default: "" },

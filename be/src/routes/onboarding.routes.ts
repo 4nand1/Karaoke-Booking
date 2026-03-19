@@ -35,9 +35,6 @@ router.post("/karaoke", async (req, res) => {
       openingHours,
       openingTime,
       closingTime,
-      roomTypes,
-      pricePerHour,
-      capacity,
       amenities,
       images,
       rulesPolicies,
@@ -55,9 +52,6 @@ router.post("/karaoke", async (req, res) => {
       openingHours?: string
       openingTime?: string
       closingTime?: string
-      roomTypes?: string[]
-      pricePerHour?: number | string
-      capacity?: number | string
       amenities?: string[]
       images?: string[]
       rulesPolicies?: string
@@ -80,9 +74,7 @@ router.post("/karaoke", async (req, res) => {
       !city ||
       !description ||
       !openingTime ||
-      !closingTime ||
-      pricePerHour == null ||
-      capacity == null
+      !closingTime
     ) {
       return res.status(400).json({ message: "Missing required fields" })
     }
@@ -104,9 +96,6 @@ router.post("/karaoke", async (req, res) => {
       openingHours: resolvedOpeningHours,
       openingTime,
       closingTime,
-      roomTypes: Array.isArray(roomTypes) ? roomTypes : [],
-      pricePerHour: Number(pricePerHour),
-      capacity: Number(capacity),
       amenities: Array.isArray(amenities) ? amenities : [],
       images: Array.isArray(images) ? images : [],
       rulesPolicies: rulesPolicies ?? "",
@@ -137,7 +126,7 @@ router.post("/karaoke", async (req, res) => {
     })
 
     return res.status(201).json({
-      message: "Karaoke registration submitted and is pending approval",
+      message: "Karaoke registration submitted successfully",
       karaoke,
     })
   } catch (error) {
