@@ -209,4 +209,49 @@
       rgba(59, 130, 246, 0.4) 100%
     );
   }
+
+ 
+
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+.karaoke-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  border: 2px solid hsl(var(--background));
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+}
+
+.karaoke-marker-active {
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  border: 4px solid hsl(var(--background));
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+}
+
+.user-location-marker {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: hsl(var(--chart-2));
+  border: 4px solid hsl(var(--background));
+  box-shadow: 0 0 0 8px color-mix(in srgb, hsl(var(--chart-2)) 24%, transparent);
+}
+
+.user-location-marker::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 9999px;
+  background: hsl(var(--background));
+}
+
 }
