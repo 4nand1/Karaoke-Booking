@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { MapPin } from "lucide-react";
+import { Clock3, MapPin, Navigation } from "lucide-react";
 import type { LatLngExpression } from "leaflet";
 import L from "leaflet";
 import { Marker, Popup } from "react-leaflet";
@@ -32,24 +32,90 @@ type UserLocation = {
   longitude: number;
 };
 
-const MapPreview = () => {
+function createKaraokeIcon(isActive = false) {
+  const size = isActive ? 34 : 28;
+
+  return L.divIcon({
+    className: "custom-marker-root",
+    html: `
+      <div
+        style="
+          position: relative;
+          width: ${size}px;
+          height: ${size}px;
+          background: #ff2f92;
+          border-radius: ${size}px ${size}px ${size}px 0;
+          transform: rotate(-45deg);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+          border: 3px solid #ffffff;
+        "
+      >
+        <div
+          style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: ${isActive ? 12 : 10}px;
+            height: ${isActive ? 12 : 10}px;
+            background: rgba(255,255,255,0.35);
+            border-radius: 9999px;
+            transform: translate(-50%, -50%) rotate(45deg);
+          "
+        ></div>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size],
+    popupAnchor: [0, -size + 6],
+  });
+}
+
+function createUserIcon() {
+  return L.divIcon({
+    className: "custom-marker-root",
+    html: `
+      <div
+        style="
+          width: 22px;
+          height: 22px;
+          border-radius: 9999px;
+          background: #22d3ee;
+          border: 4px solid #ffffff;
+          box-shadow:
+            0 0 0 8px rgba(34,211,238,0.20),
+            0 8px 18px rgba(0,0,0,0.22);
+        "
+      ></div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -12],
+  });
+}
+
+export default function MapPreview() {
   const [karaokes, setKaraokes] = useState<Karaoke[]>([]);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [distanceFilter, setDistanceFilter] = useState<"all" | 1 | 5 | 10>("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchKaraokes() {
+    const fetchKaraokes = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/karaoke`);
-        const data = await res.json();
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/karaoke`);
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch karaoke data");
+        }
+
+        const data: Karaoke[] = await res.json();
         setKaraokes(data);
       } catch (error) {
         console.error("Failed to fetch karaokes:", error);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchKaraokes();
   }, []);
@@ -57,161 +123,172 @@ const MapPreview = () => {
   useEffect(() => {
     if (!navigator.geolocation) return;
 
-    navigator.geolocation.getCurrentPosition((pos) => {
-      setUserLocation({
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-      });
-    });
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      (error) => {
+        console.warn("Geolocation error:", error);
+      }
+    );
   }, []);
 
   const nearbyKaraokes = useMemo<KaraokeWithDistance[]>(() => {
-    const valid: KaraokeWithDistance[] = karaokes.filter(
-      (k): k is KaraokeWithDistance =>
-        typeof k.latitude === "number" && typeof k.longitude === "number"
+    const valid = karaokes.filter(
+      (karaoke): karaoke is KaraokeWithDistance =>
+        typeof karaoke.latitude === "number" &&
+        typeof karaoke.longitude === "number"
     );
 
-    const withDistance: KaraokeWithDistance[] = userLocation
-      ? valid.map((k) => ({
-          ...k,
-          distance: getDistanceKm(
-            userLocation.latitude,
-            userLocation.longitude,
-            k.latitude as number,
-            k.longitude as number
-          ),
-        }))
-      : valid;
+    if (!userLocation) return valid;
 
-    const filtered: KaraokeWithDistance[] =
-      distanceFilter === "all"
-        ? withDistance
-        : withDistance.filter((k) => (k.distance ?? 0) <= distanceFilter);
+    return valid
+      .map((karaoke) => ({
+        ...karaoke,
+        distance: getDistanceKm(
+          userLocation.latitude,
+          userLocation.longitude,
+          karaoke.latitude!,
+          karaoke.longitude!,
+        ),
+      }))
+      .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+  }, [karaokes, userLocation]);
 
-    return filtered.sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
-  }, [karaokes, userLocation, distanceFilter]);
+  useEffect(() => {
+    if (!selectedId && nearbyKaraokes.length > 0) {
+      setSelectedId(nearbyKaraokes[0]._id);
+    }
+  }, [nearbyKaraokes, selectedId]);
 
   const mapCenter = useMemo<LatLngExpression>(() => {
+    const selected = nearbyKaraokes.find((karaoke) => karaoke._id === selectedId);
+
+    if (
+      typeof selected?.latitude === "number" &&
+      typeof selected?.longitude === "number"
+    ) {
+      return [selected.latitude, selected.longitude];
+    }
+
     if (userLocation) {
       return [userLocation.latitude, userLocation.longitude];
     }
 
-    if (nearbyKaraokes.length) {
-      return [
-        nearbyKaraokes[0].latitude as number,
-        nearbyKaraokes[0].longitude as number,
-      ];
+    if (nearbyKaraokes.length > 0) {
+      return [nearbyKaraokes[0].latitude!, nearbyKaraokes[0].longitude!];
     }
 
     return [47.9184, 106.9177];
-  }, [userLocation, nearbyKaraokes]);
-
-  const karaokeIcon = L.divIcon({
-    className: "",
-    html: `<div style="width:18px;height:18px;background:#ec4899;border:2px solid white;border-radius:9999px;box-shadow:0 4px 12px rgba(0,0,0,0.18);"></div>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-  });
-
-  const userIcon = L.divIcon({
-    className: "",
-    html: `<div style="width:16px;height:16px;background:#22d3ee;border:2px solid white;border-radius:9999px;box-shadow:0 4px 12px rgba(0,0,0,0.18);"></div>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-  });
+  }, [nearbyKaraokes, selectedId, userLocation]);
 
   const fitPoints = useMemo<[number, number][]>(() => {
-    const pts: [number, number][] = [];
+    const points: [number, number][] = [];
 
     if (userLocation) {
-      pts.push([userLocation.latitude, userLocation.longitude]);
+      points.push([userLocation.latitude, userLocation.longitude]);
     }
 
-    nearbyKaraokes.forEach((k) => {
-      if (typeof k.latitude === "number" && typeof k.longitude === "number") {
-        pts.push([k.latitude, k.longitude]);
+    nearbyKaraokes.forEach((karaoke) => {
+      if (
+        typeof karaoke.latitude === "number" &&
+        typeof karaoke.longitude === "number"
+      ) {
+        points.push([karaoke.latitude, karaoke.longitude]);
       }
     });
 
-    return pts;
-  }, [userLocation, nearbyKaraokes]);
+    return points;
+  }, [nearbyKaraokes, userLocation]);
+
+  const karaokeIcon = useMemo(() => createKaraokeIcon(false), []);
+  const activeKaraokeIcon = useMemo(() => createKaraokeIcon(true), []);
+  const userIcon = useMemo(() => createUserIcon(), []);
 
   return (
-    <section className="container mx-auto px-6 py-16">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <h2 className="font-display text-3xl font-bold text-foreground md:text-4xl">
+    <section className="container mx-auto px-4 py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+      >
+        <h2 className="text-3xl font-bold text-foreground md:text-4xl">
           Nearby Karaoke <span className="text-primary">Venues</span>
         </h2>
-
         <p className="mt-2 text-muted-foreground">
           Discover karaoke spots around you
         </p>
       </motion.div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {(["all", 1, 5, 10] as const).map((f) => {
-          const isActive = distanceFilter === f;
-
-          return (
-            <button
-              key={String(f)}
-              onClick={() => setDistanceFilter(f)}
-              className={[
-                "rounded-full px-4 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-              ].join(" ")}
-            >
-              {f === "all" ? "All" : `${f} km`}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div className="space-y-3">
+      <div className="mt-8 grid gap-6 lg:grid-cols-[320px_1fr] lg:items-start">
+        <div className="space-y-3 lg:max-h-[520px] lg:overflow-y-auto lg:pr-1">
           {loading ? (
             <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground shadow-sm">
               Loading nearby karaoke venues...
             </div>
           ) : nearbyKaraokes.length === 0 ? (
             <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground shadow-sm">
-              No nearby karaoke venues found.
+              No karaoke venues found.
             </div>
           ) : (
-            nearbyKaraokes.map((k) => (
-              <div
-                key={k._id}
-                className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <div className="flex gap-3">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            nearbyKaraokes.map((karaoke) => {
+              const isSelected = selectedId === karaoke._id;
 
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-card-foreground">
-                      {k.name}
-                    </h3>
+              return (
+                <button
+                  key={karaoke._id}
+                  type="button"
+                  onClick={() => setSelectedId(karaoke._id)}
+                  className={[
+                    "w-full rounded-2xl border bg-card p-4 text-left shadow-sm transition-all duration-200",
+                    isSelected
+                      ? "border-primary ring-1 ring-primary/30"
+                      : "border-border hover:-translate-y-0.5 hover:shadow-md",
+                  ].join(" ")}
+                >
+                  <div className="flex gap-3">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
 
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {k.address}, {k.city}
-                    </p>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-card-foreground">
+                        {karaoke.name}
+                      </h3>
 
-                    {typeof k.distance === "number" && (
-                      <p className="mt-2 text-sm font-medium text-primary">
-                        {k.distance.toFixed(1)} km away
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {karaoke.address}, {karaoke.city}
                       </p>
-                    )}
+
+                      <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock3 className="h-4 w-4" />
+                        <span>
+                          {karaoke.openingTime} - {karaoke.closingTime}
+                        </span>
+                      </div>
+
+                      {typeof karaoke.distance === "number" && (
+                        <div className="mt-2 flex items-center gap-2 text-sm font-medium text-primary">
+                          <Navigation className="h-4 w-4" />
+                          <span>{karaoke.distance.toFixed(1)} km away</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))
+                </button>
+              );
+            })
           )}
         </div>
 
-        <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-          <div className="h-[420px] w-full bg-background">
-            <Map center={mapCenter} zoom={13} className="h-full w-full">
+        <div className="rounded-3xl border border-border bg-card shadow-sm">
+          <div className="relative h-[420px] overflow-hidden rounded-3xl md:h-[500px] lg:h-[520px]">
+            <Map
+              center={mapCenter}
+              zoom={13}
+              className="absolute inset-0 h-full w-full"
+            >
               <MapTileLayer />
               <MapZoomControl />
               <MapAutoFit points={fitPoints} />
@@ -221,30 +298,53 @@ const MapPreview = () => {
                   position={[userLocation.latitude, userLocation.longitude]}
                   icon={userIcon}
                 >
-                  <Popup>You are here</Popup>
+                  <Popup>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Your location</p>
+                      <p className="text-sm text-muted-foreground">
+                        Current position
+                      </p>
+                    </div>
+                  </Popup>
                 </Marker>
               )}
 
-              {nearbyKaraokes.map((k) => {
+              {nearbyKaraokes.map((karaoke) => {
                 if (
-                  typeof k.latitude !== "number" ||
-                  typeof k.longitude !== "number"
+                  typeof karaoke.latitude !== "number" ||
+                  typeof karaoke.longitude !== "number"
                 ) {
                   return null;
                 }
 
                 return (
                   <Marker
-                    key={k._id}
-                    position={[k.latitude, k.longitude]}
-                    icon={karaokeIcon}
+                    key={karaoke._id}
+                    position={[karaoke.latitude, karaoke.longitude]}
+                    icon={
+                      selectedId === karaoke._id
+                        ? activeKaraokeIcon
+                        : karaokeIcon
+                    }
+                    eventHandlers={{
+                      click: () => setSelectedId(karaoke._id),
+                    }}
                   >
                     <Popup>
-                      <b>{k.name}</b>
-                      <br />
-                      {k.address}
-                      <br />
-                      {k.phone}
+                      <div className="space-y-1">
+                        <p className="font-semibold">{karaoke.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {karaoke.address}, {karaoke.city}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {karaoke.phone}
+                        </p>
+                        {typeof karaoke.distance === "number" && (
+                          <p className="text-sm font-medium text-primary">
+                            {karaoke.distance.toFixed(1)} km away
+                          </p>
+                        )}
+                      </div>
                     </Popup>
                   </Marker>
                 );
@@ -255,6 +355,4 @@ const MapPreview = () => {
       </div>
     </section>
   );
-};
-
-export default MapPreview;
+}
