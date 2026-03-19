@@ -55,14 +55,18 @@ export default function Navbar() {
   }
 
   return (
-    <header className="w-full border-b bg-background">
+    <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/10">
       <div className="flex h-14 items-center justify-between px-6">
+
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Mic className="h-6 w-6" />
           <span className="text-lg font-semibold">KaraokeNow</span>
         </Link>
 
         <div className="flex items-center gap-2">
+
+          {/* Search */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -82,6 +86,7 @@ export default function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Account */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -91,7 +96,9 @@ export default function Navbar() {
 
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
-                {isSignedIn ? `Hi, ${user?.firstName || "User"}` : "Account"}
+                {isSignedIn
+                  ? `Hi, ${user?.firstName || "User"}`
+                  : "Continue as Guest"}
               </DropdownMenuLabel>
 
               <DropdownMenuSeparator />
@@ -156,7 +163,13 @@ export default function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
+          {/* Theme toggle */}
+          <Button
+            variant="glass"
+            size="icon"
+            className="rounded-xl"
+            onClick={toggleTheme}
+          >
             {theme === "dark" ? (
               <Sun className="h-5 w-5" />
             ) : (

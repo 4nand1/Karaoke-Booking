@@ -1,15 +1,22 @@
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 
+<<<<<<< Updated upstream
 export default async function DashboardPage() {
+=======
+export default async function AdminDashboardPage() {
+>>>>>>> Stashed changes
   const { userId } = await auth()
 
   if (!userId) {
     redirect("/sign-in")
   }
 
+<<<<<<< Updated upstream
   const user = await currentUser()
 
+=======
+>>>>>>> Stashed changes
   return (
     <main className="mx-auto max-w-4xl p-6">
       <div className="rounded-2xl border p-6 shadow-sm">
@@ -17,6 +24,7 @@ export default async function DashboardPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           Welcome back to KaraokeNow.
         </p>
+<<<<<<< Updated upstream
 
         <div className="mt-6 space-y-3">
           <p>
@@ -54,6 +62,8 @@ export default async function DashboardPage() {
             Track completed and pending payments.
           </p>
         </div>
+=======
+>>>>>>> Stashed changes
       </div>
     </main>
   )
