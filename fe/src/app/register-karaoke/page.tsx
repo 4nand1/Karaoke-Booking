@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ChangeEvent, type FormEvent } from "react"
+import { useState, type ChangeEvent, type FormEvent, useEffect } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -64,14 +64,31 @@ export default function RegisterKaraokePage() {
     } finally { setLoading(false) }
   }
 
+  useEffect(() => {
+  if (!user) return
+  
+  async function checkExisting() {
+    const token = await getToken()
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/karaoke/mine?ownerClerkUserId=${user?.id}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    if (res.ok) {
+      router.push("/admin")
+    }
+  }
+  
+  checkExisting()
+}, [user])
+
   const labelStyle = "mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1"
   const inputStyle = "w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3.5 text-sm text-white outline-none focus:border-purple-500/50 transition-all placeholder:text-white/10 backdrop-blur-md"
 
   return (
     <main className="relative min-h-screen w-full bg-[#0a0118]">
-      <div className="fixed inset-0 z-0">
-        <Iridescence color={[0.5, 0.6, 0.8]} mouseReact amplitude={0.1} speed={1} />
-      </div>
+     <div className="fixed inset-0 z-0 bg-[#0a0118]">
+  <Iridescence color={[0.5, 0.6, 0.8]} mouseReact amplitude={0.1} speed={1} />
+</div>
 
       <div className="relative z-10 flex min-h-screen w-full items-center justify-center p-6 py-20">
         <motion.div
