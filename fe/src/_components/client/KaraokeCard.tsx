@@ -1,23 +1,25 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import Image from "next/image";
-import { motion } from "framer-motion";
-import { MapPin, Star, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import BookingDialog from "@/_components/client/BookingDialog";
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
+import { MapPin, Star, Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import BookingDialog from "@/_components/client/BookingDialog"
 
 interface KaraokeCardProps {
-  image: string;
-  name: string;
-  location: string;
-  rating: number;
-  price: string;
-  hours: string;
-  index: number;
+  id: string
+  image: string
+  name: string
+  location: string
+  rating: number | null
+  price: string
+  hours: string
+  index: number
 }
 
 const KaraokeCard = ({
+  id,
   image,
   name,
   location,
@@ -26,7 +28,8 @@ const KaraokeCard = ({
   hours,
   index,
 }: KaraokeCardProps) => {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const router = useRouter()
 
   return (
     <>
@@ -35,19 +38,19 @@ const KaraokeCard = ({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5, delay: index * 0.1 }}
-        className="card-hover group overflow-hidden rounded-2xl bg-card shadow-md"
+        className="card-hover group cursor-pointer overflow-hidden rounded-2xl bg-card shadow-md"
+        onClick={() => router.push(`/karaoke/${id}`)}
       >
         <div className="relative h-48 overflow-hidden">
-          <Image
+          <img
             src={image}
             alt={name}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
           <div className="absolute inset-0 bg-linear-to-t from-card/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-card/90 px-2.5 py-1 text-xs font-semibold text-foreground backdrop-blur-sm">
             <Star className="h-3 w-3 fill-primary text-primary" />
-            {rating}
+            {rating === null ? "New" : rating}
           </div>
         </div>
 
@@ -74,7 +77,10 @@ const KaraokeCard = ({
               variant="neon"
               size="sm"
               className="rounded-xl"
-              onClick={() => setDialogOpen(true)}
+              onClick={(e) => {
+                e.stopPropagation()
+                setDialogOpen(true)
+              }}
             >
               Book Now
             </Button>
@@ -88,12 +94,12 @@ const KaraokeCard = ({
         image={image}
         name={name}
         location={location}
-        rating={rating}
+        rating={rating ?? 0}
         price={price}
         hours={hours}
       />
     </>
-  );
-};
+  )
+}
 
-export default KaraokeCard;
+export default KaraokeCard

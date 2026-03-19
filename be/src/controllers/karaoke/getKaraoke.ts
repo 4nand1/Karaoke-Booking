@@ -1,13 +1,21 @@
-import { RequestHandler } from "express";
-import { KaraokeModel } from "../../models/Karaoke";
+import { RequestHandler } from "express"
+import { KaraokeModel } from "../../models/Karaoke"
 
-export const getKaraoke: RequestHandler = async (_req, res) => {
-  console.log("getKaraoke")
+export const getKaraoke: RequestHandler = async (req, res) => {
   try {
-    const karaokes = await KaraokeModel.find({});
-    res.status(200).json(karaokes);
+    const approvalStatus =
+      typeof req.query.approvalStatus === "string"
+        ? req.query.approvalStatus
+        : "approved"
+
+    const filters =
+      approvalStatus === "all" ? {} : { approvalStatus }
+
+    const karaokes = await KaraokeModel.find(filters).sort({ createdAt: -1 })
+
+    return res.status(200).json({ karaokes })
   } catch (error) {
-    console.error("getKaraoke error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("getKaraoke error:", error)
+    return res.status(500).json({ message: "Server error" })
   }
-};
+}

@@ -13,6 +13,9 @@ router.post("/karaoke", async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" })
     }
 
+    console.log("POST /karaoke userId:", userId)
+    console.log("POST /karaoke body:", req.body)
+
     const clerkUser = await clerkClient.users.getUser(userId)
 
     const clerkEmail =
@@ -131,7 +134,14 @@ router.post("/karaoke", async (req, res) => {
     })
   } catch (error) {
     console.error("POST /karaoke onboarding failed:", error)
-    return res.status(500).json({ message: "Server error" })
+
+    const message =
+      error instanceof Error ? error.message : "Unknown server error"
+
+    return res.status(500).json({
+      message: "Server error",
+      error: message,
+    })
   }
 })
 
