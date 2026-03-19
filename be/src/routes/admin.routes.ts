@@ -1,26 +1,46 @@
 import { Router } from "express"
-import { getAuth } from "@clerk/express"
+import { getAuth, clerkClient } from "@clerk/express"
 import { UserProfile } from "../models/UserProfile"
+import { KaraokeModel } from "../models/Karaoke"
 
 const router = Router()
 
-router.get("/dashboard", async (req, res) => {
-  const { isAuthenticated, userId } = getAuth(req)
+router.post("/approve-owner/:userId", async (req, res) => {
+  try {
+    const { isAuthenticated } = getAuth(req)
 
-  if (!isAuthenticated || !userId) {
-    return res.status(401).json({ message: "Unauthorized" })
+    if (!isAuthenticated) {
+      return res.status(401).json({ message: "Unauthorized" })
+    }
+
+    const userId = req.params.userId
+
+    const profile = await UserProfile.findOne({ clerkUserId: userId })
+
+    if (!profile) {
+      return res.status(404).json({ message: "User not found" })
+    }
+
+    profile.ownerStatus = "approved"
+    await profile.save()
+
+    await KaraokeModel.findOneAndUpdate(
+      { ownerClerkUserId: userId },
+      { approvalStatus: "approved" }
+    )
+
+    await clerkClient.users.updateUserMetadata(userId, {
+      publicMetadata: {
+        role: "karaoke_owner",
+        ownerStatus: "approved",
+      },
+    })
+
+    return res.json({ message: "Owner approved" })
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json({ message: "Server error" })
   }
-
-  const profile = await UserProfile.findOne({ clerkUserId: userId })
-
-  if (!profile || profile.role !== "admin") {
-    return res.status(403).json({ message: "Forbidden" })
-  }
-
-  return res.json({
-    message: "Welcome to admin dashboard",
-    profile,
-  })
 })
 
 export default router

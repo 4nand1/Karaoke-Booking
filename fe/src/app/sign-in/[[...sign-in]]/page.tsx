@@ -7,7 +7,7 @@ export default function Page() {
         path="/sign-in"
         routing="path"
         signUpUrl="/sign-up"
-        forceRedirectUrl="/post-auth"
+        fallbackRedirectUrl="/post-auth"
       />
     </div>
   )

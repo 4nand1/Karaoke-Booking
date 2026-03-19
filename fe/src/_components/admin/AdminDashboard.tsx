@@ -1,7 +1,7 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -9,22 +9,31 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Search, CalendarDays, DollarSign, Users, TrendingUp, Calendar } from "lucide-react";
+} from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import {
+  Search,
+  CalendarDays,
+  DollarSign,
+  Users,
+  TrendingUp,
+  Calendar,
+} from "lucide-react"
 
-const bookings = [
-  { id: "BK-001", customer: "John Doe",      location: "Purple Haze Karaoke", room: "VIP Room",    date: "2026-03-05", time: "7:00 PM", amount: 85 },
-  { id: "BK-002", customer: "Jane Smith",     location: "Neon Dreams Studio",  room: "Medium Room", date: "2026-03-05", time: "3:00 PM", amount: 45 },
-  { id: "BK-003", customer: "Mike Johnson",   location: "Star Light Karaoke",  room: "Small Room",  date: "2026-03-06", time: "5:00 PM", amount: 25 },
-  { id: "BK-004", customer: "Sarah Williams", location: "Echo Chamber",        room: "VIP Room",    date: "2026-03-06", time: "8:00 PM", amount: 85 },
-  { id: "BK-005", customer: "Tom Brown",      location: "Purple Haze Karaoke", room: "Medium Room", date: "2026-03-07", time: "6:00 PM", amount: 45 },
-];
+type BookingRecord = {
+  id: string
+  customer: string
+  location: string
+  room: string
+  date: string
+  time: string
+  amount: number
+}
 
+const bookings: BookingRecord[] = []
 
-
-const totalRevenue = bookings.reduce((s, b) => s + b.amount, 0);
-const avgValue = Math.round(totalRevenue / bookings.length);
+const totalRevenue = bookings.reduce((s, b) => s + b.amount, 0)
+const avgValue = bookings.length ? Math.round(totalRevenue / bookings.length) : 0
 
 const stats = [
   {
@@ -39,7 +48,7 @@ const stats = [
   },
   {
     label: "Total Revenue",
-    value: `$${totalRevenue}`,
+    value: `${totalRevenue}`,
     icon: DollarSign,
     corner: TrendingUp,
     iconColor: "text-emerald-400",
@@ -49,7 +58,7 @@ const stats = [
   },
   {
     label: "Avg Booking Value",
-    value: `$${avgValue}`,
+    value: `${avgValue}`,
     icon: Users,
     corner: Calendar,
     iconColor: "text-cyan-400",
@@ -57,136 +66,129 @@ const stats = [
     glow: "group-hover:shadow-cyan-500/20",
     bar: "from-cyan-500 to-cyan-700",
   },
-];
+]
 
 export default function AdminDashboard() {
-  const [search, setSearch] = useState("");
-  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [search, setSearch] = useState("")
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   const filtered = bookings.filter(
     (b) =>
       b.customer.toLowerCase().includes(search.toLowerCase()) ||
       b.id.toLowerCase().includes(search.toLowerCase())
-  );
+  )
 
-  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-useEffect(() => {
-  setMounted(true);
-}, []);
-
-if (!mounted) return null;
+  if (!mounted) return null
 
   return (
-    <div className="min-h-screen bg-[#0a0814] p-4 sm:p-6 lg:p-8 space-y-8">
-
-      
-      <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-400 to-purple-200 bg-clip-text text-transparent">
-        Admin Dashboard
+    <div className="min-h-screen space-y-8 bg-[#0a0814] p-4 sm:p-6 lg:p-8">
+      <h1 className="bg-gradient-to-r from-purple-400 to-purple-200 bg-clip-text text-2xl font-bold text-transparent sm:text-3xl">
+        Owner Dashboard
       </h1>
 
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          const Corner = stat.corner;
+          const Icon = stat.icon
+          const Corner = stat.corner
           return (
             <div
               key={i}
-              className={`group relative rounded-2xl border border-[#2a2545] bg-[#13112a] p-5 sm:p-6
-                overflow-hidden cursor-default
-                transition-all duration-300 ease-out
-                hover:-translate-y-1 hover:border-[#3a3060]
-                hover:shadow-2xl ${stat.glow}`}
+              className={`group relative cursor-default overflow-hidden rounded-2xl border border-[#2a2545] bg-[#13112a] p-5 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#3a3060] hover:shadow-2xl ${stat.glow} sm:p-6`}
             >
-             
-              <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${stat.bar}
-                scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left`} />
+              <div
+                className={`absolute bottom-0 left-0 right-0 h-0.5 scale-x-0 bg-gradient-to-r ${stat.bar} origin-left transition-transform duration-500 group-hover:scale-x-100`}
+              />
+              <div
+                className={`absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-r ${stat.bar} opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-10`}
+              />
 
-              
-              <div className={`absolute -top-8 -right-8 w-32 h-32 rounded-full blur-3xl opacity-0
-                group-hover:opacity-10 transition-opacity duration-500 bg-gradient-to-r ${stat.bar}`} />
-
-              
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-10 h-10 rounded-xl bg-[#1e1a3a] flex items-center justify-center
-                  transition-transform duration-300 group-hover:scale-110`}>
-                  <Icon className={`w-5 h-5 ${stat.iconColor}`} />
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1e1a3a] transition-transform duration-300 group-hover:scale-110">
+                  <Icon className={`h-5 w-5 ${stat.iconColor}`} />
                 </div>
-                <Corner className={`w-5 h-5 ${stat.cornerColor} transition-all duration-300 group-hover:opacity-70`} />
+                <Corner
+                  className={`h-5 w-5 ${stat.cornerColor} transition-all duration-300 group-hover:opacity-70`}
+                />
               </div>
 
-             
-              <p className="text-3xl sm:text-4xl font-bold text-white mb-1 tracking-tight">
+              <p className="mb-1 text-3xl font-bold tracking-tight text-white sm:text-4xl">
                 {stat.value}
               </p>
-
-             
-              <p className={`text-sm ${stat.iconColor} font-medium`}>{stat.label}</p>
-
-            
+              <p className={`text-sm font-medium ${stat.iconColor}`}>
+                {stat.label}
+              </p>
             </div>
-          );
+          )
         })}
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
         <Input
           placeholder="Search by customer or booking ID..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 bg-[#13112a] border-[#2a2545] text-white placeholder:text-slate-600
-            focus:border-purple-500/50 focus:ring-purple-500/20 transition-all duration-200 rounded-xl h-11"
+          className="h-11 rounded-xl border-[#2a2545] bg-[#13112a] pl-9 text-white placeholder:text-slate-600 focus:border-purple-500/50 focus:ring-purple-500/20"
         />
       </div>
 
-      {/* Desktop Table */}
-      <div className="hidden md:block rounded-2xl border border-[#2a2545] bg-[#13112a] overflow-hidden">
+      <div className="hidden overflow-hidden rounded-2xl border border-[#2a2545] bg-[#13112a] md:block">
         <Table>
           <TableHeader>
             <TableRow className="border-[#2a2545] hover:bg-transparent">
-              {["Booking ID","Customer","Location","Room","Date","Time","Amount","Actions"].map((h) => (
-                <TableHead key={h} className="text-white font-semibold text-sm">{h}</TableHead>
+              {["Booking ID", "Customer", "Location", "Room", "Date", "Time", "Amount", "Actions"].map((h) => (
+                <TableHead key={h} className="text-sm font-semibold text-white">
+                  {h}
+                </TableHead>
               ))}
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {filtered.map((booking) => (
               <TableRow
                 key={booking.id}
                 onMouseEnter={() => setHoveredRow(booking.id)}
                 onMouseLeave={() => setHoveredRow(null)}
-                className="border-[#2a2545] hover:bg-[#1e1a3a] transition-all duration-200 cursor-default"
+                className="cursor-default border-[#2a2545] transition-all duration-200 hover:bg-[#1e1a3a]"
               >
                 <TableCell>
-                  <span className={`font-bold text-sm transition-colors duration-200 ${
-                    hoveredRow === booking.id ? "text-purple-400" : "text-white"
-                  }`}>{booking.id}</span>
-                </TableCell>
-                <TableCell className="text-slate-300 text-sm">{booking.customer}</TableCell>
-                <TableCell className="text-slate-300 text-sm">{booking.location}</TableCell>
-                <TableCell>
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    booking.room === "VIP Room"
-                      ? "bg-purple-500/15 text-purple-400"
-                      : booking.room === "Medium Room"
-                      ? "bg-cyan-500/15 text-cyan-400"
-                      : "bg-slate-500/15 text-slate-400"
-                  }`}>
-                    {booking.room}
+                  <span
+                    className={`text-sm font-bold transition-colors duration-200 ${
+                      hoveredRow === booking.id ? "text-purple-400" : "text-white"
+                    }`}
+                  >
+                    {booking.id}
                   </span>
                 </TableCell>
-                <TableCell className="text-slate-300 text-sm">{booking.date}</TableCell>
-                <TableCell className="text-slate-300 text-sm">{booking.time}</TableCell>
-                <TableCell className="text-emerald-400 font-semibold text-sm">${booking.amount}</TableCell>
+                <TableCell className="text-sm text-slate-300">
+                  {booking.customer}
+                </TableCell>
+                <TableCell className="text-sm text-slate-300">
+                  {booking.location}
+                </TableCell>
+                <TableCell className="text-sm text-slate-300">
+                  {booking.room}
+                </TableCell>
+                <TableCell className="text-sm text-slate-300">
+                  {booking.date}
+                </TableCell>
+                <TableCell className="text-sm text-slate-300">
+                  {booking.time}
+                </TableCell>
+                <TableCell className="text-sm font-semibold text-emerald-400">
+                  {booking.amount}
+                </TableCell>
                 <TableCell>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-[#3a3060] bg-transparent text-slate-300
-                      hover:bg-purple-500/15 hover:text-purple-400 hover:border-purple-500/50
-                      transition-all duration-200 text-xs"
+                    className="border-[#3a3060] bg-transparent text-xs text-slate-300 hover:border-purple-500/50 hover:bg-purple-500/15 hover:text-purple-400"
                   >
                     View
                   </Button>
@@ -197,70 +199,11 @@ if (!mounted) return null;
         </Table>
       </div>
 
-      
-      <div className="flex flex-col gap-3 md:hidden">
-        {filtered.length === 0 && (
-          <p className="text-center text-slate-500 py-8 text-sm">No bookings found.</p>
-        )}
-        {filtered.map((booking) => (
-          <div
-            key={booking.id}
-            className="rounded-2xl border border-[#2a2545] bg-[#13112a] p-4 space-y-3
-              hover:border-[#3a3060] hover:bg-[#1a1730] transition-all duration-200 active:scale-[0.99]"
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-purple-400 text-sm">{booking.id}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-[#3a3060] bg-transparent text-slate-300
-                  hover:bg-purple-500/15 hover:text-purple-400 hover:border-purple-500/50
-                  transition-all duration-200 h-7 text-xs"
-              >
-                View
-              </Button>
-            </div>
-
-            <p className="text-white font-medium">{booking.customer}</p>
-
-            <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
-              <div>
-                <p className="text-slate-500 mb-0.5">Location</p>
-                <p className="text-slate-300">{booking.location}</p>
-              </div>
-              <div>
-                <p className="text-slate-500 mb-0.5">Room</p>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  booking.room === "VIP Room"
-                    ? "bg-purple-500/15 text-purple-400"
-                    : booking.room === "Medium Room"
-                    ? "bg-cyan-500/15 text-cyan-400"
-                    : "bg-slate-500/15 text-slate-400"
-                }`}>
-                  {booking.room}
-                </span>
-              </div>
-              <div>
-                <p className="text-slate-500 mb-0.5">Date</p>
-                <p className="text-slate-300">{booking.date}</p>
-              </div>
-              <div>
-                <p className="text-slate-500 mb-0.5">Time</p>
-                <p className="text-slate-300">{booking.time}</p>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-[#2a2545] flex items-center justify-between">
-              <span className="text-slate-500 text-xs">Amount</span>
-              <span className="text-emerald-400 font-bold">${booking.amount}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filtered.length === 0 && (
-        <p className="hidden md:block text-center text-slate-500 py-8 text-sm">No bookings found.</p>
-      )}
+      {filtered.length === 0 ? (
+        <p className="py-8 text-center text-sm text-slate-500">
+          No bookings found.
+        </p>
+      ) : null}
     </div>
-  );
+  )
 }

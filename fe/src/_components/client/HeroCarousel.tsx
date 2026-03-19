@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const slides = [
@@ -41,7 +41,6 @@ const HeroCarousel = () => {
             className="h-full w-full object-cover"
           />
 
-          {/* neon overlay only */}
           <div className="absolute inset-0 gradient-hero opacity-30 mix-blend-multiply" />
         </motion.div>
       </AnimatePresence>
@@ -61,15 +60,6 @@ const HeroCarousel = () => {
                 type="text"
                 placeholder="Search karaoke rooms, venues..."
                 className="w-full bg-transparent py-3 text-foreground placeholder:text-muted-foreground focus:outline-none"
-              />
-            </div>
-
-            <div className="hidden items-center gap-2 border-l border-border px-4 md:flex">
-              <MapPin className="h-5 w-5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Location"
-                className="w-32 bg-transparent py-3 text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
             </div>
 

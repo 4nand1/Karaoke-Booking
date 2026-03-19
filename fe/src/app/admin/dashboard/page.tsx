@@ -3,7 +3,8 @@ import { redirect } from "next/navigation"
 
 type AdminProfileResponse = {
   profile?: {
-    role?: "user" | "admin"
+    role?: "customer" | "karaoke_owner"
+    ownerStatus?: "pending" | "approved" | null
     fullName?: string
     email?: string
   }
@@ -13,9 +14,18 @@ type AdminProfileResponse = {
     address?: string
     city?: string
     phone?: string
+    email?: string
+    ownerFullName?: string
+    openingHours?: string
     openingTime?: string
     closingTime?: string
     description?: string
+    roomTypes?: string[]
+    pricePerHour?: number
+    capacity?: number
+    amenities?: string[]
+    rulesPolicies?: string
+    approvalStatus?: "pending" | "approved"
   }
 }
 
@@ -41,19 +51,21 @@ async function getAdminData() {
     return null
   }
 
-  const data = (await res.json()) as AdminProfileResponse
-  return data
+  return (await res.json()) as AdminProfileResponse
 }
 
 export default async function AdminDashboardPage() {
   const data = await getAdminData()
 
   if (!data?.profile) {
-    redirect("/dashboard")
+    redirect("/")
   }
 
-  if (data.profile.role !== "admin") {
-    redirect("/dashboard")
+  if (
+    data.profile.role !== "karaoke_owner" ||
+    data.profile.ownerStatus !== "approved"
+  ) {
+    redirect("/")
   }
 
   const karaoke = data.karaoke
@@ -61,9 +73,9 @@ export default async function AdminDashboardPage() {
   return (
     <main className="mx-auto max-w-6xl p-6">
       <div className="rounded-2xl border p-6 shadow-sm">
-        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold">Owner Dashboard</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Manage your karaoke business, bookings, and payments.
+          Manage your karaoke business, listings, bookings, and venue details.
         </p>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -80,7 +92,11 @@ export default async function AdminDashboardPage() {
               </p>
               <p>
                 <span className="font-medium">Role:</span>{" "}
-                {data.profile.role || "user"}
+                {data.profile.role || "customer"}
+              </p>
+              <p>
+                <span className="font-medium">Owner status:</span>{" "}
+                {data.profile.ownerStatus || "-"}
               </p>
             </div>
           </div>
@@ -91,6 +107,14 @@ export default async function AdminDashboardPage() {
               <p>
                 <span className="font-medium">Name:</span>{" "}
                 {karaoke?.name || "No karaoke registered"}
+              </p>
+              <p>
+                <span className="font-medium">Owner:</span>{" "}
+                {karaoke?.ownerFullName || "-"}
+              </p>
+              <p>
+                <span className="font-medium">Email:</span>{" "}
+                {karaoke?.email || "-"}
               </p>
               <p>
                 <span className="font-medium">City:</span>{" "}
@@ -106,9 +130,14 @@ export default async function AdminDashboardPage() {
               </p>
               <p>
                 <span className="font-medium">Hours:</span>{" "}
-                {karaoke?.openingTime && karaoke?.closingTime
-                  ? `${karaoke.openingTime} - ${karaoke.closingTime}`
-                  : "-"}
+                {karaoke?.openingHours ||
+                  (karaoke?.openingTime && karaoke?.closingTime
+                    ? `${karaoke.openingTime} - ${karaoke.closingTime}`
+                    : "-")}
+              </p>
+              <p>
+                <span className="font-medium">Approval:</span>{" "}
+                {karaoke?.approvalStatus || "-"}
               </p>
             </div>
           </div>
@@ -143,6 +172,63 @@ export default async function AdminDashboardPage() {
           <h2 className="font-semibold">Description</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {karaoke.description}
+          </p>
+        </div>
+      ) : null}
+
+      {karaoke?.roomTypes?.length ? (
+        <div className="mt-6 rounded-2xl border p-4">
+          <h2 className="font-semibold">Room Types</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {karaoke.roomTypes.map((roomType) => (
+              <span
+                key={roomType}
+                className="rounded-full border px-3 py-1 text-sm"
+              >
+                {roomType}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {(karaoke?.pricePerHour != null || karaoke?.capacity != null) && (
+        <div className="mt-6 rounded-2xl border p-4">
+          <h2 className="font-semibold">Pricing & Capacity</h2>
+          <div className="mt-3 space-y-2 text-sm">
+            <p>
+              <span className="font-medium">Price per hour:</span>{" "}
+              {karaoke?.pricePerHour ?? "-"}
+            </p>
+            <p>
+              <span className="font-medium">Capacity:</span>{" "}
+              {karaoke?.capacity ?? "-"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {karaoke?.amenities?.length ? (
+        <div className="mt-6 rounded-2xl border p-4">
+          <h2 className="font-semibold">Amenities</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {karaoke.amenities.map((amenity) => (
+              <span
+                key={amenity}
+                className="rounded-full border px-3 py-1 text-sm"
+              >
+                {amenity}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {karaoke?.rulesPolicies ? (
+        <div className="mt-6 rounded-2xl border p-4">
+          <h2 className="font-semibold">Rules / Policies</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {karaoke.rulesPolicies}
           </p>
         </div>
       ) : null}

@@ -1,8 +1,16 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, models } from "mongoose"
 
 const orderSchema = new Schema(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    userId: { type: String, required: false, index: true },
+    bookingType: {
+      type: String,
+      enum: ["guest", "customer"],
+      required: true,
+      default: "guest",
+    },
+    guestPhoneNumber: { type: String, default: null },
+    guestConfirmationCode: { type: String, default: null },
     roomId: { type: Schema.Types.ObjectId, ref: "Room", required: true },
     BookingId: { type: Schema.Types.ObjectId, ref: "Booking", required: true },
     totalAmount: { type: Number, required: true },
@@ -10,7 +18,7 @@ const orderSchema = new Schema(
   },
   {
     timestamps: true,
-  },
-);
+  }
+)
 
-export const OrderModel = model("Order", orderSchema);
+export const OrderModel = models.Order || model("Order", orderSchema)
