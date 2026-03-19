@@ -11,6 +11,8 @@ import {
   Music,
   Utensils,
   Check,
+  Phone,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,12 +24,16 @@ import {
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { api } from "@/lib/axios";
 
 interface RoomOption {
+  _id?: string;
   name: string;
   capacity: string;
   price: string;
   features: string[];
+  amount?: number;
+  type?: string;
 }
 
 interface BookingDialogProps {
@@ -39,9 +45,11 @@ interface BookingDialogProps {
   rating: number;
   price: string;
   hours: string;
+  karaokeId?: string;
+  rooms?: RoomOption[];
 }
 
-const roomOptions: RoomOption[] = [
+const defaultRoomOptions: RoomOption[] = [
   {
     name: "Standard Room",
     capacity: "2–4 guests",
@@ -77,16 +85,83 @@ const BookingDialog = ({
   rating,
   price,
   hours,
+  karaokeId,
+  rooms,
 }: BookingDialogProps) => {
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [bookingDate, setBookingDate] = useState("");
+  const [bookingTime, setBookingTime] = useState("");
+  const [guestCount, setGuestCount] = useState("2");
+  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
   const openHour = hours.split("–")[0]?.trim() ?? "";
   const closeHour = hours.split("–")[1]?.trim() ?? "";
   const distance = (Math.random() * 4 + 0.5).toFixed(1);
+  const roomOptions = rooms?.length ? rooms : defaultRoomOptions;
+  const selectedRoomOption =
+    selectedRoom !== null ? roomOptions[selectedRoom] ?? null : null;
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      resetForm();
+    }
+
+    onOpenChange(nextOpen);
+  };
+
+  const resetForm = () => {
+    setSelectedRoom(null);
+    setCustomerName("");
+    setCustomerPhone("");
+    setBookingDate("");
+    setBookingTime("");
+    setGuestCount("2");
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!selectedRoomOption || !karaokeId) {
+      alert("This venue is not connected to live booking yet.");
+      return;
+    }
+
+    if (!customerName.trim() || !customerPhone.trim() || !bookingDate || !bookingTime) {
+      alert("Please fill in your booking details.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const response = await api.post("/bookings", {
+        karaokeId,
+        roomId: selectedRoomOption._id,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        bookingDate,
+        bookingTime,
+        guestCount: Number(guestCount) || 1,
+      });
+
+      if (!response.data?.success) {
+        throw new Error("Booking failed");
+      }
+
+      alert("Booking sent successfully. The karaoke owner can now see it.");
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Booking submit failed:", error);
+      alert("Failed to create booking");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl overflow-hidden rounded-2xl border-border/50 bg-card p-0 sm:rounded-2xl">
         <div className="relative h-48 w-full overflow-hidden">
           <Image
@@ -205,6 +280,80 @@ const BookingDialog = ({
             </div>
           </div>
 
+          <div>
+            <h3 className="mb-3 font-display text-base font-semibold text-card-foreground">
+              Booking Details
+            </h3>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="rounded-xl bg-muted/40 px-3 py-3">
+                <span className="mb-1.5 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" />
+                  Your name
+                </span>
+                <input
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full bg-transparent text-sm font-medium text-card-foreground outline-none"
+                />
+              </label>
+
+              <label className="rounded-xl bg-muted/40 px-3 py-3">
+                <span className="mb-1.5 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <Phone className="h-3.5 w-3.5" />
+                  Phone
+                </span>
+                <input
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="Phone number"
+                  className="w-full bg-transparent text-sm font-medium text-card-foreground outline-none"
+                />
+              </label>
+
+              <label className="rounded-xl bg-muted/40 px-3 py-3">
+                <span className="mb-1.5 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Date
+                </span>
+                <input
+                  type="date"
+                  value={bookingDate}
+                  onChange={(e) => setBookingDate(e.target.value)}
+                  className="w-full bg-transparent text-sm font-medium text-card-foreground outline-none"
+                />
+              </label>
+
+              <label className="rounded-xl bg-muted/40 px-3 py-3">
+                <span className="mb-1.5 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  Time
+                </span>
+                <input
+                  type="time"
+                  value={bookingTime}
+                  onChange={(e) => setBookingTime(e.target.value)}
+                  className="w-full bg-transparent text-sm font-medium text-card-foreground outline-none"
+                />
+              </label>
+
+              <label className="rounded-xl bg-muted/40 px-3 py-3 md:col-span-2">
+                <span className="mb-1.5 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" />
+                  Guests
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  value={guestCount}
+                  onChange={(e) => setGuestCount(e.target.value)}
+                  className="w-full bg-transparent text-sm font-medium text-card-foreground outline-none"
+                />
+              </label>
+            </div>
+          </div>
+
           <div className="flex gap-3">
             <Button
               variant="neon"
@@ -221,9 +370,14 @@ const BookingDialog = ({
             <Button
               variant="neon"
               className="flex-1 rounded-xl"
-              disabled={selectedRoom === null}
+              disabled={selectedRoom === null || submitting}
+              onClick={handleConfirmBooking}
             >
-              {selectedRoom !== null ? "Confirm Booking" : "Select a Room"}
+              {selectedRoom !== null
+                ? submitting
+                  ? "Booking..."
+                  : "Confirm Booking"
+                : "Select a Room"}
             </Button>
           </div>
         </div>

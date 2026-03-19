@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
+import { apiRootUrl } from "@/lib/api-url"
 
 type AdminProfileResponse = {
   profile?: {
@@ -10,6 +11,7 @@ type AdminProfileResponse = {
   }
   karaoke?: {
     _id?: string
+    ownerClerkUserId?: string
     name?: string
     address?: string
     city?: string
@@ -29,6 +31,22 @@ type AdminProfileResponse = {
   }
 }
 
+type Booking = {
+  _id: string
+  karaokeName: string
+  roomName: string
+  roomType: string
+  customerName: string
+  customerPhone: string
+  bookingDate: string
+  bookingTime: string
+  bookingSlots?: string[]
+  totalHours?: number
+  guestCount: number
+  totalAmount: number
+  status: "pending" | "confirmed" | "cancelled"
+}
+
 async function getAdminData() {
   const { userId, getToken } = await auth()
 
@@ -38,7 +56,7 @@ async function getAdminData() {
 
   const token = await getToken()
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me/profile`, {
+  const res = await fetch(`${apiRootUrl}/api/me/profile`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -52,6 +70,27 @@ async function getAdminData() {
   }
 
   return (await res.json()) as AdminProfileResponse
+}
+
+async function getOwnerBookings(ownerClerkUserId?: string) {
+  if (!ownerClerkUserId) {
+    return []
+  }
+
+  const res = await fetch(
+    `${apiRootUrl}/api/bookings/owner/${ownerClerkUserId}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    },
+  )
+
+  if (!res.ok) {
+    return []
+  }
+
+  const data = (await res.json()) as { data?: Booking[] }
+  return data.data ?? []
 }
 
 export default async function AdminDashboardPage() {
@@ -69,6 +108,7 @@ export default async function AdminDashboardPage() {
   }
 
   const karaoke = data.karaoke
+  const bookings = await getOwnerBookings(karaoke?.ownerClerkUserId)
 
   return (
     <main className="mx-auto max-w-6xl p-6">
@@ -148,7 +188,9 @@ export default async function AdminDashboardPage() {
         <div className="rounded-2xl border p-4">
           <h2 className="font-semibold">Bookings</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            View and manage customer reservations.
+            {bookings.length
+              ? `${bookings.length} reservation${bookings.length > 1 ? "s" : ""} received.`
+              : "No reservations yet."}
           </p>
         </div>
 
@@ -165,6 +207,44 @@ export default async function AdminDashboardPage() {
             Update karaoke details, opening hours, and contact info.
           </p>
         </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl border p-4">
+        <h2 className="font-semibold">Recent Bookings</h2>
+        {bookings.length ? (
+          <div className="mt-4 space-y-3">
+            {bookings.map((booking) => (
+              <div
+                key={booking._id}
+                className="rounded-xl border border-border bg-background/60 p-4"
+              >
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="font-medium">{booking.customerName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {booking.roomName} · {booking.roomType}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    {booking.status}
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm text-muted-foreground md:grid-cols-4">
+                  <p>{booking.bookingDate}</p>
+                  <p>{booking.bookingSlots?.join(", ") || booking.bookingTime}</p>
+                  <p>{booking.customerPhone}</p>
+                  <p>
+                    {booking.guestCount} guests · {booking.totalHours || booking.bookingSlots?.length || 1} hr · ₮{booking.totalAmount.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Customers book hiisnii daraa end харагдана.
+          </p>
+        )}
       </div>
 
       {karaoke?.description ? (

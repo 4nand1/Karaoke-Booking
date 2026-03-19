@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { MapPin, Star, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import BookingDialog from "@/_components/client/BookingDialog";
+import { useRouter } from "next/navigation";
 
 interface KaraokeCardProps {
   image: string;
@@ -15,6 +14,7 @@ interface KaraokeCardProps {
   price: string;
   hours: string;
   index: number;
+  karaokeId?: string;
 }
 
 const KaraokeCard = ({
@@ -25,12 +25,12 @@ const KaraokeCard = ({
   price,
   hours,
   index,
+  karaokeId,
 }: KaraokeCardProps) => {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const router = useRouter();
 
   return (
-    <>
-      <motion.div
+    <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -74,25 +74,29 @@ const KaraokeCard = ({
               variant="neon"
               size="sm"
               className="rounded-xl"
-              onClick={() => setDialogOpen(true)}
+              onClick={() => {
+                if (karaokeId) {
+                  router.push(`/book/${karaokeId}`);
+                  return;
+                }
+
+                const query = new URLSearchParams({
+                  name,
+                  location,
+                  image,
+                  price,
+                  hours,
+                  rating: String(rating),
+                });
+
+                router.push(`/book/sample?${query.toString()}`);
+              }}
             >
               Book Now
             </Button>
           </div>
         </div>
       </motion.div>
-
-      <BookingDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        image={image}
-        name={name}
-        location={location}
-        rating={rating}
-        price={price}
-        hours={hours}
-      />
-    </>
   );
 };
 

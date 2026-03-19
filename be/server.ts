@@ -12,6 +12,7 @@ import { CategoryRouter } from "./src/routes/category.router";
 import { MenuRouter } from "./src/routes/menuRouter";
 import reviewRouter from "./src/routes/review.routes";
 import { KaraokeRouter } from "./src/routes/karaokeRoutes"; 
+import bookingRouter from "./src/routes/booking.routes";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/categories", CategoryRouter);
 app.use("/api/items", MenuRouter);
 app.use("/api/reviews", reviewRouter);
+app.use("/api/bookings", bookingRouter);
 app.use("/karaoke", KaraokeRouter); 
 
 const PORT = process.env.PORT || 9000;

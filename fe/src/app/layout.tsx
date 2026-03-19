@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 import "leaflet/dist/leaflet.css";
 
@@ -14,7 +15,10 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body>{children}</body>
+        <body>
+          {children}
+          <Toaster position="bottom-right" richColors />
+        </body>
       </html>
     </ClerkProvider>
   )

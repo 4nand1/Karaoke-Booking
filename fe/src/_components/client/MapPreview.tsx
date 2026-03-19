@@ -6,9 +6,10 @@ import { Clock3, MapPin, Navigation } from "lucide-react";
 import type { LatLngExpression } from "leaflet";
 import L from "leaflet";
 import { Marker, Popup } from "react-leaflet";
+import { useRouter } from "next/navigation";
 import { Map, MapTileLayer, MapZoomControl } from "@/components/ui/map";
 import { getDistanceKm } from "@/lib/distance";
-import BookingDialog from "@/_components/client/BookingDialog";
+import { apiRootUrl } from "@/lib/api-url";
 import MapAutoFit from "./MapAutoFit";
 
 type Karaoke = {
@@ -22,6 +23,16 @@ type Karaoke = {
   closingTime: string;
   latitude?: number | null;
   longitude?: number | null;
+  ownerClerkUserId?: string;
+  image?: string | null;
+  rooms?: Array<{
+    _id: string;
+    name: string;
+    type: string;
+    price: number;
+    capacity: number;
+    image: string;
+  }>;
 };
 
 type KaraokeWithDistance = Karaoke & {
@@ -99,12 +110,12 @@ export default function MapPreview() {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchKaraokes = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/karaoke`);
+        const res = await fetch(`${apiRootUrl}/karaoke`);
 
         if (!res.ok) {
           throw new Error("Failed to fetch karaoke data");
@@ -209,14 +220,8 @@ export default function MapPreview() {
   const karaokeIcon = useMemo(() => createKaraokeIcon(false), []);
   const activeKaraokeIcon = useMemo(() => createKaraokeIcon(true), []);
   const userIcon = useMemo(() => createUserIcon(), []);
-  const selectedKaraoke = useMemo(
-    () => nearbyKaraokes.find((karaoke) => karaoke._id === selectedId) ?? null,
-    [nearbyKaraokes, selectedId],
-  );
-
   const openBookingFor = (karaokeId: string) => {
-    setSelectedId(karaokeId);
-    setDialogOpen(true);
+    router.push(`/book/${karaokeId}`);
   };
 
   return (
@@ -367,18 +372,6 @@ export default function MapPreview() {
       </div>
       </section>
 
-      {selectedKaraoke && (
-        <BookingDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          image="/karaoke.jpg"
-          name={selectedKaraoke.name}
-          location={`${selectedKaraoke.address}, ${selectedKaraoke.city}`}
-          rating={4.8}
-          price="See room prices"
-          hours={`${selectedKaraoke.openingTime} – ${selectedKaraoke.closingTime}`}
-        />
-      )}
     </>
   );
 }

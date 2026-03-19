@@ -5,13 +5,13 @@ import HeroCarousel from "@/_components/client/HeroCarousel";
 import FilterBar, { type FilterValues } from "@/_components/client/FilterBar";
 import KaraokeCard from "@/_components/client/KaraokeCard";
 import MapPreview from "@/_components/client/MapPreview";
-import CustomerReviews from "@/_components/client/CustomerReviews";
 import ReviewForm from "@/_components/client/ReviewForm";
 import Footer from "@/_components/client/Footer";
+import { apiRootUrl } from "@/lib/api-url";
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-const karaokeSpots = [
+const fallbackKaraokeSpots = [
   {
     image: "/karaoke-card-1.jpg",
     name: "Neon Lounge",
@@ -74,7 +74,7 @@ const karaokeSpots = [
   },
 ];
 
-const featuredRooms = [
+const fallbackFeaturedRooms = [
   {
     image: "/karaoke-card-3.jpg",
     name: "Diamond VIP Suite",
@@ -101,6 +101,22 @@ const featuredRooms = [
   },
 ];
 
+type LiveKaraoke = {
+  _id: string;
+  name: string;
+  address: string;
+  city: string;
+  openingTime: string;
+  closingTime: string;
+  image?: string | null;
+  rooms?: Array<{
+    _id: string;
+    type: string;
+    price: number;
+    capacity: number;
+  }>;
+};
+
 const Index = () => {
   const [filters, setFilters] = useState<FilterValues>({
     priceSort: "default",
@@ -108,9 +124,73 @@ const Index = () => {
     openNow: false,
     roomSize: "all",
   });
+  const [liveKaraokes, setLiveKaraokes] = useState<LiveKaraoke[]>([]);
+
+  useEffect(() => {
+    const fetchKaraokes = async () => {
+      try {
+        const res = await fetch(`${apiRootUrl}/karaoke`, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error("Failed to fetch karaoke list");
+        }
+
+        const data: LiveKaraoke[] = await res.json();
+        setLiveKaraokes(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to load karaoke cards:", error);
+      }
+    };
+
+    fetchKaraokes();
+  }, []);
+
+  const popularSpots = useMemo(() => {
+    if (!liveKaraokes.length) {
+      return fallbackKaraokeSpots;
+    }
+
+    return liveKaraokes.map((karaoke, index) => {
+      const firstRoom = karaoke.rooms?.[0];
+      const minPrice = karaoke.rooms?.length
+        ? Math.min(...karaoke.rooms.map((room) => room.price))
+        : null;
+
+      return {
+        karaokeId: karaoke._id,
+        image: karaoke.image || `/karaoke-card-${(index % 6) + 1}.jpg`,
+        name: karaoke.name,
+        location: `${karaoke.address}, ${karaoke.city}`,
+        rating: 4.8,
+        price: minPrice ?? 0,
+        hours: `${karaoke.openingTime} - ${karaoke.closingTime}`,
+        roomSize: firstRoom?.type?.toLowerCase() || "all",
+        isOpenNow: true,
+      };
+    });
+  }, [liveKaraokes]);
+
+  const featuredRooms = useMemo(() => {
+    if (!liveKaraokes.length) {
+      return fallbackFeaturedRooms;
+    }
+
+    return liveKaraokes.slice(0, 3).map((karaoke, index) => {
+      const firstRoom = karaoke.rooms?.[0];
+
+      return {
+        karaokeId: karaoke._id,
+        image: karaoke.image || `/karaoke-card-${(index % 6) + 1}.jpg`,
+        name: karaoke.name,
+        location: `${karaoke.address}, ${karaoke.city}`,
+        rating: 4.9,
+        price: firstRoom ? `₮${firstRoom.price.toLocaleString()}/hr` : "See prices",
+        hours: `${karaoke.openingTime} - ${karaoke.closingTime}`,
+      };
+    });
+  }, [liveKaraokes]);
 
   const filteredSpots = useMemo(() => {
-    const filtered = karaokeSpots.filter((spot) => {
+    const filtered = popularSpots.filter((spot) => {
       if (
         filters.minRating !== "all" &&
         spot.rating < Number(filters.minRating)
@@ -138,7 +218,7 @@ const Index = () => {
     }
 
     return filtered;
-  }, [filters]);
+  }, [filters, popularSpots]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,7 +246,7 @@ const Index = () => {
             <KaraokeCard
               key={spot.name}
               {...spot}
-              price={`$${spot.price}/hr`}
+              price={typeof spot.price === "number" ? `₮${spot.price}/hr` : spot.price}
               index={i}
             />
           ))}
