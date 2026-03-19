@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { clerkClient, getAuth } from "@clerk/express"
 import { UserProfile } from "../models/UserProfile"
-import { Karaoke } from "../models/Karaoke"
+import { KaraokeModel } from "../models/Karaoke"
 
 const router = Router()
 
@@ -17,7 +17,7 @@ router.get("/me", async (req, res) => {
   }
 
   const profile = await UserProfile.findOne({ clerkUserId: userId })
-  const karaoke = await Karaoke.findOne({ ownerClerkUserId: userId })
+  const karaoke = await KaraokeModel.findOne({ ownerClerkUserId: userId })
 
   return res.json({
     userId,
@@ -54,7 +54,7 @@ router.get("/me/profile", async (req, res) => {
     })
   }
 
-  const karaoke = await Karaoke.findOne({ ownerClerkUserId: userId })
+  const karaoke = await KaraokeModel.findOne({ ownerClerkUserId: userId })
 
   return res.json({
     profile,
