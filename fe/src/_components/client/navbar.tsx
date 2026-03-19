@@ -9,12 +9,15 @@ import {
   Mic,
   LayoutDashboard,
   Store,
-  Users,
   LogIn,
   UserPlus,
   MapPin,
+  User,
+  BookOpen,
+  LogOut,
+  BadgeCheck,
 } from "lucide-react"
-import { UserButton, useUser } from "@clerk/nextjs"
+import { SignOutButton, useUser } from "@clerk/nextjs"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -27,7 +30,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 type PublicMetadata = {
-  role?: "user" | "admin"
+  role?: "customer" | "karaoke_owner"
+  ownerStatus?: "pending" | "approved" | null
 }
 
 export default function Navbar() {
@@ -37,10 +41,15 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
-  const role = useMemo(() => {
-    if (!user) return undefined
-    return (user.publicMetadata as PublicMetadata)?.role
+  const metadata = useMemo(() => {
+    return (user?.publicMetadata as PublicMetadata | undefined) ?? {}
   }, [user])
+
+  const isApprovedOwner =
+    metadata.role === "karaoke_owner" && metadata.ownerStatus === "approved"
+
+  const isPendingOwner =
+    metadata.role === "karaoke_owner" && metadata.ownerStatus === "pending"
 
   useEffect(() => {
     setMounted(true)
@@ -84,6 +93,8 @@ export default function Navbar() {
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
       <div className="container mx-auto flex items-center justify-between px-6 py-4">
+        
+        {/* Logo */}
         <motion.div whileHover={{ scale: 1.05 }}>
           <Link href="/" className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
@@ -95,15 +106,19 @@ export default function Navbar() {
           </Link>
         </motion.div>
 
+        {/* Right side */}
         <div className="flex items-center gap-2">
+
+          {/* Location button */}
           <Button variant="glass" size="icon" className="rounded-xl" type="button">
             <MapPin className="h-5 w-5 text-foreground" />
           </Button>
 
+          {/* User dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="glass" size="icon" className="rounded-xl" type="button">
-                <Users className="h-5 w-5 text-foreground" />
+                <User className="h-5 w-5 text-foreground" />
               </Button>
             </DropdownMenuTrigger>
 
@@ -114,19 +129,20 @@ export default function Navbar() {
 
               <DropdownMenuSeparator />
 
+              {/* 🔓 SIGNED OUT */}
               {!isSignedIn ? (
                 <>
                   <DropdownMenuItem asChild>
                     <Link href="/sign-in" className="flex items-center gap-2">
                       <LogIn className="h-4 w-4" />
-                      Login
+                      Log in
                     </Link>
                   </DropdownMenuItem>
 
                   <DropdownMenuItem asChild>
                     <Link href="/sign-up" className="flex items-center gap-2">
                       <UserPlus className="h-4 w-4" />
-                      User signup
+                      Sign up
                     </Link>
                   </DropdownMenuItem>
 
@@ -140,40 +156,77 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                 </>
-              ) : (
+              ) : isApprovedOwner ? (
+                /* 🏢 APPROVED OWNER */
                 <>
-                  {role === "admin" ? (
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href="/admin/dashboard"
-                        className="flex items-center gap-2"
-                      >
-                        <Store className="h-4 w-4" />
-                        Admin dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href="/dashboard"
-                        className="flex items-center gap-2"
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/admin/dashboard"
+                      className="flex items-center gap-2"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/admin/dashboard?tab=listings"
+                      className="flex items-center gap-2"
+                    >
+                      <Store className="h-4 w-4" />
+                      My karaoke listings
+                    </Link>
+                  </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
 
-                  <div className="px-2 py-2">
-                    <UserButton />
-                  </div>
+                  <SignOutButton redirectUrl="/">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <LogOut className="h-4 w-4" />
+                      Log out
+                    </DropdownMenuItem>
+                  </SignOutButton>
+                </>
+              ) : (
+                /* 👤 CUSTOMER (or pending owner) */
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/my-bookings" className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      My bookings
+                    </Link>
+                  </DropdownMenuItem>
+
+                  {isPendingOwner && (
+                    <DropdownMenuItem disabled className="flex items-center gap-2">
+                      <BadgeCheck className="h-4 w-4" />
+                      Approval pending
+                    </DropdownMenuItem>
+                  )}
+
+                  <SignOutButton redirectUrl="/">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <LogOut className="h-4 w-4" />
+                      Log out
+                    </DropdownMenuItem>
+                  </SignOutButton>
+
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/register-karaoke"
+                      className="flex items-center gap-2"
+                    >
+                      <Store className="h-4 w-4" />
+                      Register karaoke
+                    </Link>
+                  </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Theme toggle */}
           <Button
             variant="glass"
             size="icon"
@@ -197,6 +250,7 @@ export default function Navbar() {
               </motion.div>
             </AnimatePresence>
           </Button>
+
         </div>
       </div>
     </motion.nav>

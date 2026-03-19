@@ -13,33 +13,65 @@ router.post("/karaoke", async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" })
     }
 
+    const clerkUser = await clerkClient.users.getUser(userId)
+
+    const clerkEmail =
+      clerkUser.emailAddresses.find(
+        (item) => item.id === clerkUser.primaryEmailAddressId
+      )?.emailAddress || ""
+
+    const clerkFullName =
+      `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "Owner"
+
     const {
       karaokeName,
+      ownerFullName,
+      phoneNumber,
+      phone,
+      email,
       address,
       city,
-      phone,
       description,
+      openingHours,
       openingTime,
       closingTime,
+      amenities,
+      images,
+      rulesPolicies,
       latitude,
       longitude,
     } = req.body as {
       karaokeName?: string
+      ownerFullName?: string
+      phoneNumber?: string
+      phone?: string
+      email?: string
       address?: string
       city?: string
-      phone?: string
       description?: string
+      openingHours?: string
       openingTime?: string
       closingTime?: string
+      amenities?: string[]
+      images?: string[]
+      rulesPolicies?: string
       latitude?: number | null
       longitude?: number | null
     }
 
+    const resolvedPhone = phoneNumber || phone || ""
+    const resolvedOwnerFullName = ownerFullName || clerkFullName
+    const resolvedEmail = email || clerkEmail
+    const resolvedOpeningHours =
+      openingHours || [openingTime, closingTime].filter(Boolean).join(" - ")
+
     if (
       !karaokeName ||
+      !resolvedOwnerFullName ||
+      !resolvedPhone ||
+      !resolvedEmail ||
       !address ||
       !city ||
-      !phone ||
       !description ||
       !openingTime ||
       !closingTime
@@ -52,35 +84,35 @@ router.post("/karaoke", async (req, res) => {
       return res.status(409).json({ message: "Karaoke already registered" })
     }
 
-    const clerkUser = await clerkClient.users.getUser(userId)
-    const email = clerkUser.emailAddresses.find(
-      (item) => item.id === clerkUser.primaryEmailAddressId
-    )?.emailAddress || ""
-
-    const firstName = clerkUser.firstName || ""
-    const lastName = clerkUser.lastName || ""
-    const fullName = `${firstName} ${lastName}`.trim() || "Owner"
-
     const karaoke = await KaraokeModel.create({
       ownerClerkUserId: userId,
+      ownerFullName: resolvedOwnerFullName,
+      email: resolvedEmail,
       name: karaokeName,
       address,
       city,
-      phone,
+      phone: resolvedPhone,
       description,
+      openingHours: resolvedOpeningHours,
       openingTime,
       closingTime,
+      amenities: Array.isArray(amenities) ? amenities : [],
+      images: Array.isArray(images) ? images : [],
+      rulesPolicies: rulesPolicies ?? "",
+      approvalStatus: "pending",
       latitude: latitude ?? null,
       longitude: longitude ?? null,
+      image: Array.isArray(images) && images.length > 0 ? images[0] : null,
     })
 
     await UserProfile.findOneAndUpdate(
       { clerkUserId: userId },
       {
         clerkUserId: userId,
-        email,
-        fullName,
-        role: "admin",
+        email: resolvedEmail,
+        fullName: resolvedOwnerFullName,
+        role: "karaoke_owner",
+        ownerStatus: "pending",
         karaokeId: String(karaoke._id),
       },
       { upsert: true, new: true }
@@ -88,16 +120,17 @@ router.post("/karaoke", async (req, res) => {
 
     await clerkClient.users.updateUserMetadata(userId, {
       publicMetadata: {
-        role: "admin",
+        role: "karaoke_owner",
+        ownerStatus: "pending",
       },
     })
 
     return res.status(201).json({
-      message: "Karaoke registered successfully",
+      message: "Karaoke registration submitted successfully",
       karaoke,
     })
   } catch (error) {
-    console.error(error)
+    console.error("POST /karaoke onboarding failed:", error)
     return res.status(500).json({ message: "Server error" })
   }
 })
