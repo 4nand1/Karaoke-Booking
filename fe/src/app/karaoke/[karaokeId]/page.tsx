@@ -1,6 +1,6 @@
 "use client";
 
-import Navbar from "@/_components/navbar";
+import Navbar from "@/_components/client/navbar";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, MapPin } from "lucide-react";
 
