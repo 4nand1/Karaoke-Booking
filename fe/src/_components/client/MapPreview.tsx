@@ -8,6 +8,7 @@ import L from "leaflet";
 import { Marker, Popup } from "react-leaflet";
 import { Map, MapTileLayer, MapZoomControl } from "@/components/ui/map";
 import { getDistanceKm } from "@/lib/distance";
+import BookingDialog from "@/_components/client/BookingDialog";
 import MapAutoFit from "./MapAutoFit";
 
 type Karaoke = {
@@ -98,6 +99,7 @@ export default function MapPreview() {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchKaraokes = async () => {
@@ -207,9 +209,19 @@ export default function MapPreview() {
   const karaokeIcon = useMemo(() => createKaraokeIcon(false), []);
   const activeKaraokeIcon = useMemo(() => createKaraokeIcon(true), []);
   const userIcon = useMemo(() => createUserIcon(), []);
+  const selectedKaraoke = useMemo(
+    () => nearbyKaraokes.find((karaoke) => karaoke._id === selectedId) ?? null,
+    [nearbyKaraokes, selectedId],
+  );
+
+  const openBookingFor = (karaokeId: string) => {
+    setSelectedId(karaokeId);
+    setDialogOpen(true);
+  };
 
   return (
-    <section className="container mx-auto px-4 py-12">
+    <>
+      <section className="container mx-auto px-4 py-12">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -241,7 +253,7 @@ export default function MapPreview() {
                 <button
                   key={karaoke._id}
                   type="button"
-                  onClick={() => setSelectedId(karaoke._id)}
+                  onClick={() => openBookingFor(karaoke._id)}
                   className={[
                     "w-full rounded-2xl border bg-card p-4 text-left shadow-sm transition-all duration-200",
                     isSelected
@@ -327,7 +339,7 @@ export default function MapPreview() {
                         : karaokeIcon
                     }
                     eventHandlers={{
-                      click: () => setSelectedId(karaoke._id),
+                      click: () => openBookingFor(karaoke._id),
                     }}
                   >
                     <Popup>
@@ -353,6 +365,20 @@ export default function MapPreview() {
           </div>
         </div>
       </div>
-    </section>
+      </section>
+
+      {selectedKaraoke && (
+        <BookingDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          image="/karaoke.jpg"
+          name={selectedKaraoke.name}
+          location={`${selectedKaraoke.address}, ${selectedKaraoke.city}`}
+          rating={4.8}
+          price="See room prices"
+          hours={`${selectedKaraoke.openingTime} – ${selectedKaraoke.closingTime}`}
+        />
+      )}
+    </>
   );
 }
