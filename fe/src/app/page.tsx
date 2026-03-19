@@ -4,12 +4,16 @@ import Navbar from "@/_components/client/navbar";
 import HeroCarousel from "@/_components/client/HeroCarousel";
 import FilterBar, { type FilterValues } from "@/_components/client/FilterBar";
 import KaraokeCard from "@/_components/client/KaraokeCard";
-import MapPreview from "@/_components/client/MapPreview";
 import ReviewForm from "@/_components/client/ReviewForm";
 import Footer from "@/_components/client/Footer";
 import { apiRootUrl } from "@/lib/api-url";
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+
+const MapPreview = dynamic(() => import("@/_components/client/MapPreview"), {
+  ssr: false,
+});
 
 const fallbackKaraokeSpots = [
   {
