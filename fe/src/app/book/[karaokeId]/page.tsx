@@ -1,7 +1,7 @@
 "use client";
 
+import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
@@ -15,7 +15,6 @@ import {
 import { api } from "@/lib/axios";
 import { apiRootUrl } from "@/lib/api-url";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
 type Room = {
   _id: string;
@@ -88,6 +87,10 @@ export default function BookingPage() {
     bookingDate: "",
     guestCount: "2",
   });
+  const [feedback, setFeedback] = useState<{
+    type: "error" | "info";
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchKaraoke = async () => {
@@ -137,8 +140,13 @@ export default function BookingPage() {
         setKaraoke(karaokeData);
         setSelectedRoomId(karaokeData?.rooms?.[0]?._id ?? "");
         setSelectedSlots([]);
+        setFeedback(null);
       } catch (error) {
         console.error("Failed to load booking page:", error);
+        setFeedback({
+          type: "error",
+          message: "Failed to load karaoke details.",
+        });
       } finally {
         setLoading(false);
       }
@@ -186,7 +194,10 @@ export default function BookingPage() {
 
   const handleSubmit = async () => {
     if (!karaoke || !selectedRoom || karaoke._id === "sample") {
-      toast.error("Room information is missing.");
+      setFeedback({
+        type: "error",
+        message: "Room information is missing.",
+      });
       return;
     }
 
@@ -196,12 +207,16 @@ export default function BookingPage() {
       !formData.bookingDate ||
       !selectedSlots.length
     ) {
-      toast.warning("Please fill in all booking details.");
+      setFeedback({
+        type: "error",
+        message: "Please fill in all booking details.",
+      });
       return;
     }
 
     try {
       setSubmitting(true);
+      setFeedback(null);
 
       const response = await api.post("/booking", {
         karaokeId: karaoke._id,
@@ -217,11 +232,17 @@ export default function BookingPage() {
         throw new Error("Failed to create booking");
       }
 
-      toast.success("Booking sent successfully.");
       router.push("/my-bookings");
     } catch (error) {
       console.error("Booking failed:", error);
-      toast.error("Failed to create booking");
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message || "Failed to create booking"
+        : "Failed to create booking";
+
+      setFeedback({
+        type: "error",
+        message,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -518,13 +539,29 @@ export default function BookingPage() {
             )}
           </div>
 
+          {feedback && (
+            <div
+              className={[
+                "mt-6 rounded-2xl border px-4 py-3 text-sm",
+                feedback.type === "error"
+                  ? "border-red-500/20 bg-red-500/10 text-red-400"
+                  : "border-blue-500/20 bg-blue-500/10 text-blue-400",
+              ].join(" ")}
+            >
+              {feedback.message}
+            </div>
+          )}
+
           <Button
             variant="neon"
             className="mt-6 w-full rounded-xl"
             disabled={!selectedRoom || submitting}
             onClick={() => {
               if (karaoke._id === "sample") {
-                toast.info("This sample card is not linked to a live karaoke yet.");
+                setFeedback({
+                  type: "info",
+                  message: "This sample card is not linked to a live karaoke yet.",
+                });
                 return;
               }
 
