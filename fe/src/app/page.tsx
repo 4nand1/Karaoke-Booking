@@ -98,6 +98,22 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
   }
 }
 
+type LiveKaraoke = {
+  _id: string;
+  name: string;
+  address: string;
+  city: string;
+  openingTime: string;
+  closingTime: string;
+  image?: string | null;
+  rooms?: Array<{
+    _id: string;
+    type: string;
+    price: number;
+    capacity: number;
+  }>;
+};
+
 const Index = () => {
   const [filters, setFilters] = useState<FilterValues>({
     priceSort: "default",

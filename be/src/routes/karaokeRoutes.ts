@@ -3,6 +3,7 @@ import {
   createKaraoke,
   deleteKaraoke,
   getKaraoke,
+  getKaraokeById,
   updateKaraoke,
 } from "../controllers"
 import { getKaraokeByOwner } from "../controllers/karaoke/getKaraokeByOwner"

@@ -5,9 +5,10 @@ import { motion } from "framer-motion";
 import { Clock3, MapPin, Navigation } from "lucide-react";
 import type { LatLngExpression, DivIcon } from "leaflet";
 import { Marker, Popup } from "react-leaflet";
+import { useRouter } from "next/navigation";
 import { Map, MapTileLayer, MapZoomControl } from "@/components/ui/map";
 import { getDistanceKm } from "@/lib/distance";
-import BookingDialog from "@/_components/client/BookingDialog";
+import { apiRootUrl } from "@/lib/api-url";
 import MapAutoFit from "./MapAutoFit";
 
 type Karaoke = {
@@ -21,6 +22,16 @@ type Karaoke = {
   closingTime: string;
   latitude?: number | null;
   longitude?: number | null;
+  ownerClerkUserId?: string;
+  image?: string | null;
+  rooms?: Array<{
+    _id: string;
+    name: string;
+    type: string;
+    price: number;
+    capacity: number;
+    image: string;
+  }>;
 };
 
 type KaraokeWithDistance = Karaoke & {
@@ -244,8 +255,7 @@ export default function MapPreview() {
   );
 
   const openBookingFor = (karaokeId: string) => {
-    setSelectedId(karaokeId);
-    setDialogOpen(true);
+    router.push(`/book/${karaokeId}`);
   };
 
   if (!leafletLib) {
@@ -408,18 +418,6 @@ export default function MapPreview() {
         </div>
       </section>
 
-      {selectedKaraoke && (
-        <BookingDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          image="/karaoke.jpg"
-          name={selectedKaraoke.name}
-          location={`${selectedKaraoke.address}, ${selectedKaraoke.city}`}
-          rating={4.8}
-          price="See room prices"
-          hours={`${selectedKaraoke.openingTime} – ${selectedKaraoke.closingTime}`}
-        />
-      )}
     </>
   );
 }
