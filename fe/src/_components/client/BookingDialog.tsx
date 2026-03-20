@@ -135,7 +135,7 @@ const BookingDialog = ({
     try {
       setSubmitting(true);
 
-      const response = await api.post("/bookings", {
+      const response = await api.post("/booking", {
         karaokeId,
         roomId: selectedRoomOption._id,
         customerName: customerName.trim(),

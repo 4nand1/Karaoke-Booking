@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
+import { apiBaseUrl } from "@/lib/api-url"
 
 type FormDataType = {
   karaokeName: string
@@ -84,7 +85,7 @@ export default function KaraokeRegisterForm() {
       }
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/onboarding/karaoke`,
+        `${apiBaseUrl}/onboarding/karaoke`,
         {
           method: "POST",
           headers: {
@@ -132,9 +133,15 @@ export default function KaraokeRegisterForm() {
         throw new Error(data.message || "Failed to register karaoke")
       }
 
+      const karaokeId = data?.karaoke?._id
+
       setMessage("Karaoke registration submitted successfully.")
       setFormData(initialForm)
-      router.push("/")
+      router.push(
+        karaokeId
+          ? `/admin/karaoke/${encodeURIComponent(karaokeId)}/rooms`
+          : "/admin/dashboard"
+      )
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Something went wrong"

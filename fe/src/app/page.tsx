@@ -9,7 +9,7 @@ import ReviewForm from "@/_components/client/ReviewForm"
 import Footer from "@/_components/client/Footer"
 import { motion } from "framer-motion"
 import { useEffect, useMemo, useState } from "react"
-import { api } from "@/lib/axios"
+import { apiRootUrl } from "@/lib/api-url"
 
 type KaraokeListing = {
   _id: string
@@ -98,22 +98,6 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
   }
 }
 
-type LiveKaraoke = {
-  _id: string;
-  name: string;
-  address: string;
-  city: string;
-  openingTime: string;
-  closingTime: string;
-  image?: string | null;
-  rooms?: Array<{
-    _id: string;
-    type: string;
-    price: number;
-    capacity: number;
-  }>;
-};
-
 const Index = () => {
   const [filters, setFilters] = useState<FilterValues>({
     priceSort: "default",
@@ -131,8 +115,16 @@ const Index = () => {
         setLoading(true)
         setError("")
 
-        const { data } = await api.get("/karaoke")
-        setKaraokes(Array.isArray(data?.karaokes) ? data.karaokes : [])
+        const response = await fetch(`${apiRootUrl}/karaoke`, {
+          cache: "no-store",
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to load karaokes: ${response.status}`)
+        }
+
+        const data = (await response.json()) as { karaokes?: KaraokeListing[] }
+        setKaraokes(Array.isArray(data.karaokes) ? data.karaokes : [])
       } catch (err) {
         console.error("Failed to fetch karaokes:", err)
         setError("Failed to load karaoke listings")

@@ -78,7 +78,7 @@ async function getOwnerBookings(ownerClerkUserId?: string) {
   }
 
   const res = await fetch(
-    `${apiRootUrl}/api/bookings/owner/${ownerClerkUserId}`,
+    `${apiRootUrl}/api/booking/owner/${ownerClerkUserId}`,
     {
       method: "GET",
       cache: "no-store",

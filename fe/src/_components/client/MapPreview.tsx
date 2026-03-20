@@ -105,11 +105,11 @@ function createUserIcon(L: typeof import("leaflet")) {
 }
 
 export default function MapPreview() {
+  const router = useRouter();
   const [karaokes, setKaraokes] = useState<Karaoke[]>([]);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [leafletLib, setLeafletLib] = useState<typeof import("leaflet") | null>(null);
 
   useEffect(() => {
@@ -129,8 +129,7 @@ export default function MapPreview() {
   useEffect(() => {
     const fetchKaraokes = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-        const url = baseUrl ? `${baseUrl}/karaoke` : "/api/karaoke";
+        const url = `${apiRootUrl}/karaoke`;
 
         const res = await fetch(url);
 
@@ -138,8 +137,8 @@ export default function MapPreview() {
           throw new Error(`Failed to fetch karaoke data: ${res.status}`);
         }
 
-        const data: Karaoke[] = await res.json();
-        setKaraokes(data);
+        const data = (await res.json()) as { karaokes?: Karaoke[] };
+        setKaraokes(Array.isArray(data.karaokes) ? data.karaokes : []);
       } catch (error) {
         console.error("Failed to fetch karaokes:", error);
       } finally {
@@ -248,11 +247,6 @@ export default function MapPreview() {
     if (!leafletLib) return undefined;
     return createUserIcon(leafletLib);
   }, [leafletLib]);
-
-  const selectedKaraoke = useMemo(
-    () => nearbyKaraokes.find((karaoke) => karaoke._id === selectedId) ?? null,
-    [nearbyKaraokes, selectedId]
-  );
 
   const openBookingFor = (karaokeId: string) => {
     router.push(`/book/${karaokeId}`);

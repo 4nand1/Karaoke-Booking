@@ -7,7 +7,6 @@ import {
   updateKaraoke,
 } from "../controllers"
 import { getKaraokeByOwner } from "../controllers/karaoke/getKaraokeByOwner"
-import { getKaraokeById } from "../controllers/karaoke/getKaraokebyId"
 
 const KaraokeRouter = Router()
 

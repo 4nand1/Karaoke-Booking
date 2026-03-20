@@ -131,9 +131,11 @@ export default function BookingPage() {
           throw new Error("Failed to fetch karaoke");
         }
 
-        const data: Karaoke = await response.json();
-        setKaraoke(data);
-        setSelectedRoomId(data.rooms?.[0]?._id ?? "");
+        const data = (await response.json()) as { karaoke?: Karaoke };
+        const karaokeData = data.karaoke ?? null;
+
+        setKaraoke(karaokeData);
+        setSelectedRoomId(karaokeData?.rooms?.[0]?._id ?? "");
         setSelectedSlots([]);
       } catch (error) {
         console.error("Failed to load booking page:", error);
@@ -201,7 +203,7 @@ export default function BookingPage() {
     try {
       setSubmitting(true);
 
-      const response = await api.post("/bookings", {
+      const response = await api.post("/booking", {
         karaokeId: karaoke._id,
         roomId: selectedRoom._id,
         customerName: formData.customerName.trim(),

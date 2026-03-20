@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, type ChangeEvent, type FormEvent } from "react"
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Star } from "lucide-react"
 import Iridescence from "@/components/Iridescence"
+import { apiBaseUrl } from "@/lib/api-url"
 
 type KaraokeForm = {
   karaokeName: string
@@ -23,13 +24,6 @@ type KaraokeForm = {
   rulesPolicies: string
   latitude: string
   longitude: string
-}
-
-type KaraokeResponse = {
-  message?: string
-  karaoke?: {
-    _id?: string
-  }
 }
 
 export default function RegisterKaraokePage() {
@@ -58,6 +52,14 @@ export default function RegisterKaraokePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      ownerFullName: prev.ownerFullName || user?.fullName || "",
+      email: prev.email || user?.primaryEmailAddress?.emailAddress || "",
+    }))
+  }, [user])
+
   function handleChange(
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
@@ -83,8 +85,6 @@ export default function RegisterKaraokePage() {
         return
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9000"
-
       const payload = {
         karaokeName: form.karaokeName,
         ownerFullName: form.ownerFullName || user?.fullName || "",
@@ -109,27 +109,29 @@ export default function RegisterKaraokePage() {
         longitude: form.longitude ? Number(form.longitude) : null,
       }
 
-const res = await fetch(`${apiUrl}/api/onboarding/karaoke`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify(payload),
-})
+      const res = await fetch(`${apiBaseUrl}/onboarding/karaoke`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
 
-const contentType = res.headers.get("content-type") || ""
-const data =
-  contentType.includes("application/json") ? await res.json() : await res.text()
+      const contentType = res.headers.get("content-type") || ""
+      const data =
+        contentType.includes("application/json")
+          ? await res.json()
+          : await res.text()
 
-if (!res.ok) {
-  const backendMessage =
-    typeof data === "string"
-      ? data
-      : `${data.message || "Request failed"}${data.error ? `: ${data.error}` : ""}`
+      if (!res.ok) {
+        const backendMessage =
+          typeof data === "string"
+            ? data
+            : `${data.message || "Request failed"}${data.error ? `: ${data.error}` : ""}`
 
-  throw new Error(backendMessage)
-}
+        throw new Error(backendMessage)
+      }
 
       const karaokeId =
         typeof data === "string" ? undefined : data.karaoke?._id
@@ -138,7 +140,7 @@ if (!res.ok) {
         throw new Error("Karaoke created but karaoke ID was not returned")
       }
 
-      router.push(`/admin/rooms/new?karaokeId=${encodeURIComponent(karaokeId)}`)
+      router.push(`/admin/karaoke/${encodeURIComponent(karaokeId)}/rooms`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Алдаа гарлаа")
     } finally {

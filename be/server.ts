@@ -13,19 +13,23 @@ import { CategoryRouter } from "./src/routes/category.router"
 import { MenuRouter } from "./src/routes/menuRouter"
 import reviewRouter from "./src/routes/review.routes"
 import { KaraokeRouter } from "./src/routes/karaokeRoutes"
-import bookingRoutes from "./src/routes/bookingRoutes"
+import bookingRoutes from "./src/routes/booking.routes"
 
 const app = express()
 
-const publishableKey = process.env.CLERK_PUBLISHABLE_KEY
+const publishableKey =
+  process.env.CLERK_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 const secretKey = process.env.CLERK_SECRET_KEY
-
-if (!publishableKey) {
-  throw new Error("Missing CLERK_PUBLISHABLE_KEY in backend .env")
-}
 
 if (!secretKey) {
   throw new Error("Missing CLERK_SECRET_KEY in backend .env")
+}
+
+if (!publishableKey) {
+  console.warn(
+    "CLERK_PUBLISHABLE_KEY is missing in backend .env, continuing with CLERK_SECRET_KEY only"
+  )
 }
 
 app.use(
@@ -39,8 +43,8 @@ app.use(express.json())
 
 app.use(
   clerkMiddleware({
-    publishableKey,
     secretKey,
+    ...(publishableKey ? { publishableKey } : {}),
   })
 )
 
@@ -50,6 +54,7 @@ app.use("/api/categories", CategoryRouter)
 app.use("/api/items", MenuRouter)
 app.use("/api/reviews", reviewRouter)
 app.use("/api/booking", bookingRoutes)
+app.use("/api/bookings", bookingRoutes)
 app.use("/karaoke", KaraokeRouter)
 
 app.use(

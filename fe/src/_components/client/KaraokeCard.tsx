@@ -27,13 +27,13 @@ const KaraokeCard = ({
   price,
   hours,
   index,
-  karaokeId,
 }: KaraokeCardProps) => {
   const [dialogOpen, setDialogOpen] = useState(false)
   const router = useRouter()
 
   return (
-    <motion.div
+    <>
+      <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}

@@ -5,6 +5,24 @@ import { KaraokeModel } from "../models/Karaoke"
 
 const router = Router()
 
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function normalizeStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean)
+}
+
+function normalizeCoordinate(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+
 router.post("/karaoke", async (req, res) => {
   try {
     const { isAuthenticated, userId } = getAuth(req)
@@ -62,22 +80,33 @@ router.post("/karaoke", async (req, res) => {
       longitude?: number | null
     }
 
-    const resolvedPhone = phoneNumber || phone || ""
-    const resolvedOwnerFullName = ownerFullName || clerkFullName
-    const resolvedEmail = email || clerkEmail
+    const normalizedKaraokeName = normalizeText(karaokeName)
+    const normalizedAddress = normalizeText(address)
+    const normalizedCity = normalizeText(city)
+    const normalizedDescription = normalizeText(description)
+    const normalizedOpeningTime = normalizeText(openingTime)
+    const normalizedClosingTime = normalizeText(closingTime)
+    const normalizedRulesPolicies = normalizeText(rulesPolicies)
+    const normalizedAmenities = normalizeStringArray(amenities)
+    const normalizedImages = normalizeStringArray(images)
+    const resolvedPhone = normalizeText(phoneNumber) || normalizeText(phone) || ""
+    const resolvedOwnerFullName =
+      normalizeText(ownerFullName) || clerkFullName
+    const resolvedEmail = normalizeText(email) || clerkEmail
     const resolvedOpeningHours =
-      openingHours || [openingTime, closingTime].filter(Boolean).join(" - ")
+      normalizeText(openingHours) ||
+      [normalizedOpeningTime, normalizedClosingTime].filter(Boolean).join(" - ")
 
     if (
-      !karaokeName ||
+      !normalizedKaraokeName ||
       !resolvedOwnerFullName ||
       !resolvedPhone ||
       !resolvedEmail ||
-      !address ||
-      !city ||
-      !description ||
-      !openingTime ||
-      !closingTime
+      !normalizedAddress ||
+      !normalizedCity ||
+      !normalizedDescription ||
+      !normalizedOpeningTime ||
+      !normalizedClosingTime
     ) {
       return res.status(400).json({ message: "Missing required fields" })
     }
@@ -91,21 +120,21 @@ router.post("/karaoke", async (req, res) => {
       ownerClerkUserId: userId,
       ownerFullName: resolvedOwnerFullName,
       email: resolvedEmail,
-      name: karaokeName,
-      address,
-      city,
+      name: normalizedKaraokeName,
+      address: normalizedAddress,
+      city: normalizedCity,
       phone: resolvedPhone,
-      description,
+      description: normalizedDescription,
       openingHours: resolvedOpeningHours,
-      openingTime,
-      closingTime,
-      amenities: Array.isArray(amenities) ? amenities : [],
-      images: Array.isArray(images) ? images : [],
-      rulesPolicies: rulesPolicies ?? "",
+      openingTime: normalizedOpeningTime,
+      closingTime: normalizedClosingTime,
+      amenities: normalizedAmenities,
+      images: normalizedImages,
+      rulesPolicies: normalizedRulesPolicies,
       approvalStatus: "pending",
-      latitude: latitude ?? null,
-      longitude: longitude ?? null,
-      image: Array.isArray(images) && images.length > 0 ? images[0] : null,
+      latitude: normalizeCoordinate(latitude),
+      longitude: normalizeCoordinate(longitude),
+      image: normalizedImages[0] ?? null,
     })
 
     await UserProfile.findOneAndUpdate(

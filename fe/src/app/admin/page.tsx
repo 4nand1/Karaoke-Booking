@@ -8,6 +8,7 @@ import {
   Plus, Trash2, Phone, Clock, LayoutGrid, 
   UtensilsCrossed, Star, MapPin
 } from "lucide-react"
+import { apiRootUrl } from "@/lib/api-url"
 
 type Room = {
   _id: string
@@ -59,12 +60,12 @@ export default function AdminDashboard() {
     try {
       const token = await getToken()
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/karaoke/mine?ownerClerkUserId=${user?.id}`,
+        `${apiRootUrl}/karaoke/mine?ownerClerkUserId=${user?.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       )
       if (res.ok) {
         const data = await res.json()
-        setKaraoke(data)
+        setKaraoke(data.karaoke ?? null)
       }
     } catch (e) {
       console.error("Fetch error:", e)
@@ -184,7 +185,7 @@ function RoomsTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: () => v
     setLoading(true)
     try {
       const token = await getToken()
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/karaoke/${karaoke._id}/rooms`, {
+      const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ rooms: [{ ...form, price: Number(form.price), capacity: Number(form.capacity) }] }),
@@ -200,7 +201,7 @@ function RoomsTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: () => v
   async function handleDelete(roomId: string) {
     if (!confirm("Устгахдаа итгэлтэй байна уу?")) return
     const token = await getToken()
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/karaoke/${karaoke._id}/rooms/${roomId}`, {
+    await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/rooms/${roomId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -296,11 +297,11 @@ function MenuTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: () => vo
     setLoading(true)
     try {
       const token = await getToken()
-     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/karaoke/${karaoke._id}/menu`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-  body: JSON.stringify({ items: [{ ...form, price: Number(form.price) }] }),
-})
+      const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/menu`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ items: [{ ...form, price: Number(form.price) }] }),
+      })
       if (res.ok) {
         setAdding(false)
         setForm({ name: "", category: "food", price: "", description: "", image: "" })
@@ -312,10 +313,10 @@ function MenuTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: () => vo
   async function handleDelete(itemId: string) {
     if (!confirm("Устгахдаа итгэлтэй байна уу?")) return
     const token = await getToken()
-  await fetch(`${process.env.NEXT_PUBLIC_API_URL}/karaoke/${karaoke._id}/menu/${itemId}`, {
-  method: "DELETE",
-  headers: { Authorization: `Bearer ${token}` },
-})
+    await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/menu/${itemId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    })
     onRefresh()
   }
 

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useRouter, useParams } from "next/navigation"
+import { apiRootUrl } from "@/lib/api-url"
 
 type RoomType = "VIP" | "Medium" | "Small"
 
@@ -158,7 +159,7 @@ export default function RoomsSetupPage() {
       }))
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/karaoke/${karaokeId}/rooms`,
+        `${apiRootUrl}/karaoke/${karaokeId}/rooms`,
         {
           method: "POST",
           headers: {
