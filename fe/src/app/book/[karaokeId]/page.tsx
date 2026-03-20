@@ -246,11 +246,10 @@ export default function BookingPage() {
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
           <div className="relative h-72">
-            <Image
+            <img
               src={karaoke.image || "/karaoke.jpg"}
               alt={karaoke.name}
-              fill
-              className="object-cover"
+              className="h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
             <div className="absolute bottom-6 left-6 right-6">

@@ -1,11 +1,9 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { MapPin, Star, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import BookingDialog from "@/_components/client/BookingDialog"
 
 interface KaraokeCardProps {
   id: string
@@ -16,14 +14,6 @@ interface KaraokeCardProps {
   price: string
   hours: string
   index: number
-  rooms: Array<{
-    _id: string
-    name: string
-    type: string
-    price: number
-    capacity: number
-    image: string
-  }>
 }
 
 const KaraokeCard = ({
@@ -34,10 +24,8 @@ const KaraokeCard = ({
   rating,
   price,
   hours,
-  rooms,
   index,
 }: KaraokeCardProps) => {
-  const [dialogOpen, setDialogOpen] = useState(false)
   const router = useRouter()
 
   return (
@@ -88,7 +76,7 @@ const KaraokeCard = ({
               className="rounded-xl"
               onClick={(e) => {
                 e.stopPropagation()
-                setDialogOpen(true)
+                router.push(`/book/${id}`)
               }}
             >
               Book Now
@@ -96,26 +84,6 @@ const KaraokeCard = ({
           </div>
         </div>
       </motion.div>
-
-      <BookingDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        image={image}
-        name={name}
-        location={location}
-        rating={rating ?? 0}
-        price={price}
-        hours={hours}
-        karaokeId={id}
-        rooms={rooms.map((room) => ({
-          _id: room._id,
-          name: room.name,
-          capacity: `${room.capacity} guests`,
-          price: `₮${room.price.toLocaleString()}/hr`,
-          type: room.type,
-          features: [room.type, `${room.capacity} guests`],
-        }))}
-      />
     </>
   )
 }

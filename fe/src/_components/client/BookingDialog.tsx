@@ -23,7 +23,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { api } from "@/lib/axios";
 
 interface RoomOption {
@@ -164,11 +163,10 @@ const BookingDialog = ({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl overflow-hidden rounded-2xl border-border/50 bg-card p-0 sm:rounded-2xl">
         <div className="relative h-48 w-full overflow-hidden">
-          <Image
+          <img
             src={image}
             alt={name}
-            fill
-            className="object-cover"
+            className="h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-linear-to-t from-card via-card/40 to-transparent" />
           <div className="absolute bottom-4 left-5 right-5">

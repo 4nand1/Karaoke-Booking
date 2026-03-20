@@ -296,7 +296,10 @@ export default function MapPreview() {
                   <button
                     key={karaoke._id}
                     type="button"
-                    onClick={() => openBookingFor(karaoke._id)}
+                    onClick={() => {
+                      setSelectedId(karaoke._id)
+                      openBookingFor(karaoke._id)
+                    }}
                     className={[
                       "w-full rounded-2xl border bg-card p-4 text-left shadow-sm transition-all duration-200",
                       isSelected
@@ -384,11 +387,11 @@ export default function MapPreview() {
                       position={[karaoke.latitude, karaoke.longitude]}
                       icon={icon}
                       eventHandlers={{
-                        click: () => openBookingFor(karaoke._id),
+                        click: () => setSelectedId(karaoke._id),
                       }}
                     >
                       <Popup>
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           <p className="font-semibold">{karaoke.name}</p>
                           <p className="text-sm text-muted-foreground">
                             {karaoke.address}, {karaoke.city}
@@ -401,6 +404,13 @@ export default function MapPreview() {
                               {karaoke.distance.toFixed(1)} km away
                             </p>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => openBookingFor(karaoke._id)}
+                            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                          >
+                            Open Booking
+                          </button>
                         </div>
                       </Popup>
                     </Marker>

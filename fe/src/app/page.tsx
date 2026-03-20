@@ -251,7 +251,6 @@ const Index = () => {
                 rating={spot.rating}
                 price={spot.price}
                 hours={spot.hours}
-                rooms={spot.rooms}
                 index={i}
               />
             ))}
@@ -287,7 +286,6 @@ const Index = () => {
                 rating={spot.rating}
                 price={spot.price}
                 hours={spot.hours}
-                rooms={spot.rooms}
                 index={i}
               />
             ))}
