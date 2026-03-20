@@ -1,17 +1,27 @@
-import { RequestHandler } from "express";
-import { KaraokeModel } from "../../models/Karaoke";
+import { RequestHandler } from "express"
+import { KaraokeModel } from "../../models/Karaoke"
 
 export const updateKaraoke: RequestHandler = async (req, res) => {
-  const { _id } = req.params;
-  const body = req.body;
+  try {
+    const { id } = req.params
+    const body = { ...req.body }
 
-  const karaoke = await KaraokeModel.findByIdAndUpdate(_id, body, {
-    new: true,
-  });
+    if (Array.isArray(body.images)) {
+      body.image = body.images[0] ?? null
+    }
 
-  if (!karaoke) {
-    return res.status(404).json({ message: "Karaoke not found" });
+    const karaoke = await KaraokeModel.findByIdAndUpdate(id, body, {
+      new: true,
+      runValidators: true,
+    })
+
+    if (!karaoke) {
+      return res.status(404).json({ message: "Karaoke not found" })
+    }
+
+    return res.status(200).json({ karaoke })
+  } catch (error) {
+    console.error("updateKaraoke error:", error)
+    return res.status(500).json({ message: "Failed to update karaoke" })
   }
-
-  res.status(200).json(karaoke);
-};
+}

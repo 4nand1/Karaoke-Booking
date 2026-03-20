@@ -1,109 +1,102 @@
-"use client";
+"use client"
 
-import Navbar from "@/_components/client/navbar";
-import HeroCarousel from "@/_components/client/HeroCarousel";
-import FilterBar, { type FilterValues } from "@/_components/client/FilterBar";
-import KaraokeCard from "@/_components/client/KaraokeCard";
-import ReviewForm from "@/_components/client/ReviewForm";
-import Footer from "@/_components/client/Footer";
-import { apiRootUrl } from "@/lib/api-url";
-import { motion } from "framer-motion";
-import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import Navbar from "@/_components/client/navbar"
+import HeroCarousel from "@/_components/client/HeroCarousel"
+import FilterBar, { type FilterValues } from "@/_components/client/FilterBar"
+import KaraokeCard from "@/_components/client/KaraokeCard"
+import MapPreview from "@/_components/client/MapPreview"
+import ReviewForm from "@/_components/client/ReviewForm"
+import Footer from "@/_components/client/Footer"
+import { motion } from "framer-motion"
+import { useEffect, useMemo, useState } from "react"
+import { api } from "@/lib/axios"
 
-const MapPreview = dynamic(() => import("@/_components/client/MapPreview"), {
-  ssr: false,
-});
+type KaraokeListing = {
+  _id: string
+  name: string
+  address: string
+  city: string
+  description: string
+  openingHours?: string
+  openingTime?: string
+  closingTime?: string
+  roomTypes?: string[]
+  pricePerHour?: number | null
+  capacity?: number | null
+  amenities?: string[]
+  images?: string[]
+  image?: string | null
+  approvalStatus: "pending" | "approved" | "rejected" | "draft"
+  rating?: number | null
+}
 
-const fallbackKaraokeSpots = [
-  {
-    image: "/karaoke-card-1.jpg",
-    name: "Neon Lounge",
-    location: "Shibuya, Tokyo",
-    rating: 4.9,
-    price: 25,
-    hours: "6 PM – 2 AM",
-    roomSize: "medium",
-    isOpenNow: true,
-  },
-  {
-    image: "/karaoke-card-2.jpg",
-    name: "Star Karaoke",
-    location: "Koreatown, LA",
-    rating: 4.7,
-    price: 18,
-    hours: "4 PM – 12 AM",
-    roomSize: "small",
-    isOpenNow: true,
-  },
-  {
-    image: "/karaoke-card-3.jpg",
-    name: "VIP Suite KTV",
-    location: "Midtown, NYC",
-    rating: 4.8,
-    price: 45,
-    hours: "5 PM – 3 AM",
-    roomSize: "vip",
-    isOpenNow: true,
-  },
-  {
-    image: "/karaoke-card-4.jpg",
-    name: "Mic Drop Bar",
-    location: "Downtown, SF",
-    rating: 4.6,
-    price: 22,
-    hours: "7 PM – 1 AM",
-    roomSize: "small",
-    isOpenNow: false,
-  },
-  {
-    image: "/karaoke-card-5.jpg",
-    name: "Echo Room",
-    location: "Soho, London",
-    rating: 4.5,
-    price: 30,
-    hours: "6 PM – 12 AM",
-    roomSize: "large",
-    isOpenNow: true,
-  },
-  {
-    image: "/karaoke-card-6.jpg",
-    name: "Stage Light KTV",
-    location: "Hollywood, LA",
-    rating: 4.8,
-    price: 35,
-    hours: "5 PM – 2 AM",
-    roomSize: "large",
-    isOpenNow: true,
-  },
-];
+type KaraokeCardViewModel = {
+  id: string
+  image: string
+  name: string
+  location: string
+  rating: number | null
+  price: string
+  hours: string
+  roomSize: "small" | "medium" | "large" | "vip" | "all"
+  isOpenNow: boolean
+}
 
-const fallbackFeaturedRooms = [
-  {
-    image: "/karaoke-card-3.jpg",
-    name: "Diamond VIP Suite",
-    location: "Central, HK",
-    rating: 5.0,
-    price: "$80/hr",
-    hours: "24 Hours",
-  },
-  {
-    image: "/karaoke-card-1.jpg",
-    name: "Neon Paradise",
-    location: "Gangnam, Seoul",
-    rating: 4.9,
-    price: "$55/hr",
-    hours: "6 PM – 4 AM",
-  },
-  {
-    image: "/karaoke-card-4.jpg",
-    name: "The Grand Stage",
-    location: "Vegas Strip, LV",
-    rating: 4.9,
-    price: "$65/hr",
-    hours: "24 Hours",
-  },
-];
+const FALLBACK_IMAGE = "/karaoke-card-1.jpg"
+
+function toMinutes(value?: string) {
+  if (!value || !value.includes(":")) return null
+  const [hours, minutes] = value.split(":").map(Number)
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null
+  return hours * 60 + minutes
+}
+
+function getIsOpenNow(openingTime?: string, closingTime?: string) {
+  const open = toMinutes(openingTime)
+  const close = toMinutes(closingTime)
+
+  if (open === null || close === null) return false
+
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+  if (open <= close) {
+    return currentMinutes >= open && currentMinutes <= close
+  }
+
+  return currentMinutes >= open || currentMinutes <= close
+}
+
+function getRoomSize(roomTypes?: string[]): "small" | "medium" | "large" | "vip" | "all" {
+  const normalized = roomTypes?.map((type) => type.toLowerCase()) ?? []
+
+  if (normalized.includes("vip")) return "vip"
+  if (normalized.includes("large")) return "large"
+  if (normalized.includes("medium")) return "medium"
+  if (normalized.includes("small")) return "small"
+
+  return "all"
+}
+
+function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
+  return {
+    id: karaoke._id,
+    image: karaoke.image || karaoke.images?.[0] || FALLBACK_IMAGE,
+    name: karaoke.name,
+    location: [karaoke.address, karaoke.city].filter(Boolean).join(", "),
+    rating: karaoke.rating ?? null,
+    price:
+      typeof karaoke.pricePerHour === "number"
+        ? `$${karaoke.pricePerHour}/hr`
+        : "Contact for price",
+    hours:
+      karaoke.openingHours ||
+      [karaoke.openingTime, karaoke.closingTime].filter(Boolean).join(" - ") ||
+      "Hours not available",
+    roomSize: getRoomSize(karaoke.roomTypes),
+    isOpenNow: getIsOpenNow(karaoke.openingTime, karaoke.closingTime),
+  }
+}
 
 type LiveKaraoke = {
   _id: string;
@@ -127,102 +120,75 @@ const Index = () => {
     minRating: "all",
     openNow: false,
     roomSize: "all",
-  });
-  const [liveKaraokes, setLiveKaraokes] = useState<LiveKaraoke[]>([]);
+  })
+  const [karaokes, setKaraokes] = useState<KaraokeListing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
   useEffect(() => {
     const fetchKaraokes = async () => {
       try {
-        const res = await fetch(`${apiRootUrl}/karaoke`, { cache: "no-store" });
-        if (!res.ok) {
-          throw new Error("Failed to fetch karaoke list");
-        }
+        setLoading(true)
+        setError("")
 
-        const data: LiveKaraoke[] = await res.json();
-        setLiveKaraokes(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("Failed to load karaoke cards:", error);
+        const { data } = await api.get("/karaoke")
+        setKaraokes(Array.isArray(data?.karaokes) ? data.karaokes : [])
+      } catch (err) {
+        console.error("Failed to fetch karaokes:", err)
+        setError("Failed to load karaoke listings")
+      } finally {
+        setLoading(false)
       }
-    };
-
-    fetchKaraokes();
-  }, []);
-
-  const popularSpots = useMemo(() => {
-    if (!liveKaraokes.length) {
-      return fallbackKaraokeSpots;
     }
 
-    return liveKaraokes.map((karaoke, index) => {
-      const firstRoom = karaoke.rooms?.[0];
-      const minPrice = karaoke.rooms?.length
-        ? Math.min(...karaoke.rooms.map((room) => room.price))
-        : null;
+    fetchKaraokes()
+  }, [])
 
-      return {
-        karaokeId: karaoke._id,
-        image: karaoke.image || `/karaoke-card-${(index % 6) + 1}.jpg`,
-        name: karaoke.name,
-        location: `${karaoke.address}, ${karaoke.city}`,
-        rating: 4.8,
-        price: minPrice ?? 0,
-        hours: `${karaoke.openingTime} - ${karaoke.closingTime}`,
-        roomSize: firstRoom?.type?.toLowerCase() || "all",
-        isOpenNow: true,
-      };
-    });
-  }, [liveKaraokes]);
-
-  const featuredRooms = useMemo(() => {
-    if (!liveKaraokes.length) {
-      return fallbackFeaturedRooms;
-    }
-
-    return liveKaraokes.slice(0, 3).map((karaoke, index) => {
-      const firstRoom = karaoke.rooms?.[0];
-
-      return {
-        karaokeId: karaoke._id,
-        image: karaoke.image || `/karaoke-card-${(index % 6) + 1}.jpg`,
-        name: karaoke.name,
-        location: `${karaoke.address}, ${karaoke.city}`,
-        rating: 4.9,
-        price: firstRoom ? `₮${firstRoom.price.toLocaleString()}/hr` : "See prices",
-        hours: `${karaoke.openingTime} - ${karaoke.closingTime}`,
-      };
-    });
-  }, [liveKaraokes]);
+  const mappedKaraokes = useMemo(
+    () => karaokes.map(mapKaraokeToCard),
+    [karaokes]
+  )
 
   const filteredSpots = useMemo(() => {
-    const filtered = popularSpots.filter((spot) => {
+    const filtered = mappedKaraokes.filter((spot) => {
       if (
         filters.minRating !== "all" &&
-        spot.rating < Number(filters.minRating)
+        (spot.rating === null || spot.rating < Number(filters.minRating))
       ) {
-        return false;
+        return false
       }
 
       if (filters.openNow && !spot.isOpenNow) {
-        return false;
+        return false
       }
 
       if (filters.roomSize !== "all" && spot.roomSize !== filters.roomSize) {
-        return false;
+        return false
       }
 
-      return true;
-    });
+      return true
+    })
 
     if (filters.priceSort === "lowToHigh") {
-      return [...filtered].sort((a, b) => a.price - b.price);
+      return [...filtered].sort((a, b) => {
+        const priceA = Number(a.price.replace(/[^\d.]/g, "")) || Number.MAX_SAFE_INTEGER
+        const priceB = Number(b.price.replace(/[^\d.]/g, "")) || Number.MAX_SAFE_INTEGER
+        return priceA - priceB
+      })
     }
 
     if (filters.priceSort === "highToLow") {
-      return [...filtered].sort((a, b) => b.price - a.price);
+      return [...filtered].sort((a, b) => {
+        const priceA = Number(a.price.replace(/[^\d.]/g, "")) || -1
+        const priceB = Number(b.price.replace(/[^\d.]/g, "")) || -1
+        return priceB - priceA
+      })
     }
 
-    return filtered;
-  }, [filters, popularSpots]);
+    return filtered
+  }, [filters, mappedKaraokes])
+
+  const featuredSpots = useMemo(() => mappedKaraokes.slice(0, 3), [mappedKaraokes])
 
   return (
     <div className="min-h-screen bg-background">
@@ -239,52 +205,82 @@ const Index = () => {
             Popular Karaoke <span className="text-primary">Spots</span>
           </h2>
           <p className="mt-2 text-muted-foreground">
-            Top-rated venues loved by our community
+            Approved karaoke listings from real owners on the platform
           </p>
         </motion.div>
 
         <FilterBar onChange={setFilters} />
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredSpots.map((spot, i) => (
-            <KaraokeCard
-              key={spot.name}
-              {...spot}
-              price={typeof spot.price === "number" ? `₮${spot.price}/hr` : spot.price}
-              index={i}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="mt-8 rounded-2xl border border-border bg-card p-6 text-muted-foreground">
+            Loading karaoke listings...
+          </div>
+        ) : error ? (
+          <div className="mt-8 rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-red-400">
+            {error}
+          </div>
+        ) : filteredSpots.length === 0 ? (
+          <div className="mt-8 rounded-2xl border border-border bg-card p-6 text-muted-foreground">
+            No karaoke listings found.
+          </div>
+        ) : (
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredSpots.map((spot, i) => (
+              <KaraokeCard
+                key={spot.id}
+                id={spot.id}
+                image={spot.image}
+                name={spot.name}
+                location={spot.location}
+                rating={spot.rating}
+                price={spot.price}
+                hours={spot.hours}
+                index={i}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       <MapPreview />
 
-      <section className="container mx-auto px-6 py-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <h2 className="font-display text-3xl font-bold text-foreground md:text-4xl">
-            Featured <span className="text-primary">Rooms</span>
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            Premium experiences hand-picked for you
-          </p>
-        </motion.div>
+      {featuredSpots.length > 0 && (
+        <section className="container mx-auto px-6 py-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="font-display text-3xl font-bold text-foreground md:text-4xl">
+              Featured <span className="text-primary">Karaoke</span>
+            </h2>
+            <p className="mt-2 text-muted-foreground">
+              Real listings highlighted from the current approved catalogue
+            </p>
+          </motion.div>
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {featuredRooms.map((room, i) => (
-            <KaraokeCard key={room.name} {...room} index={i} />
-          ))}
-        </div>
-      </section>
-{/* 
-      <CustomerReviews /> */}
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredSpots.map((spot, i) => (
+              <KaraokeCard
+                key={`featured-${spot.id}`}
+                id={spot.id}
+                image={spot.image}
+                name={spot.name}
+                location={spot.location}
+                rating={spot.rating}
+                price={spot.price}
+                hours={spot.hours}
+                index={i}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       <ReviewForm />
       <Footer />
     </div>
-  );
-};
+  )
+}
 
-export default Index;
+export default Index

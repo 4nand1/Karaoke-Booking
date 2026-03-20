@@ -2,7 +2,7 @@ import { Schema, Types, model, models } from "mongoose"
 import { IRoom, roomSchema } from "./Room"
 import { IMenuItem, menuItemSchema } from "./MenuItem"
 
-export type KaraokeApprovalStatus = "pending" | "approved"
+export type KaraokeApprovalStatus = "pending" | "approved" | "rejected" | "draft"
 
 export interface IKaraoke {
   ownerClerkUserId: string
@@ -16,6 +16,9 @@ export interface IKaraoke {
   openingHours?: string
   openingTime: string
   closingTime: string
+  roomTypes?: string[]
+  pricePerHour?: number | null
+  capacity?: number | null
   amenities?: string[]
   images?: string[]
   rulesPolicies?: string
@@ -23,6 +26,7 @@ export interface IKaraoke {
   latitude?: number | null
   longitude?: number | null
   image?: string | null
+  rating?: number | null
   createdAt: Date
   updatedAt: Date
   rooms: Types.DocumentArray<IRoom>
@@ -42,18 +46,22 @@ const karaokeSchema = new Schema<IKaraoke>(
     openingHours: { type: String, default: "" },
     openingTime: { type: String, required: true },
     closingTime: { type: String, required: true },
+    roomTypes: [{ type: String }],
+    pricePerHour: { type: Number, default: null },
+    capacity: { type: Number, default: null },
     amenities: [{ type: String }],
     images: [{ type: String }],
     rulesPolicies: { type: String, default: "" },
     approvalStatus: {
       type: String,
-      enum: ["pending", "approved"],
+      enum: ["pending", "approved", "rejected", "draft"],
       default: "pending",
       index: true,
     },
     latitude: { type: Number, default: null },
     longitude: { type: Number, default: null },
     image: { type: String, default: null },
+    rating: { type: Number, default: null },
     rooms: [roomSchema],
     menu: [menuItemSchema],
   },

@@ -25,6 +25,13 @@ type KaraokeForm = {
   longitude: string
 }
 
+type KaraokeResponse = {
+  message?: string
+  karaoke?: {
+    _id?: string
+  }
+}
+
 export default function RegisterKaraokePage() {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -76,47 +83,57 @@ export default function RegisterKaraokePage() {
         return
       }
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/onboarding/karaoke`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            karaokeName: form.karaokeName,
-            ownerFullName: form.ownerFullName || user?.fullName || "",
-            phoneNumber: form.phoneNumber,
-            email: form.email || user?.primaryEmailAddress?.emailAddress || "",
-            address: form.address,
-            city: form.city,
-            description: form.description,
-            openingHours: form.openingHours,
-            openingTime: form.openingTime,
-            closingTime: form.closingTime,
-            amenities: form.amenities
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean),
-            images: form.images
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean),
-            rulesPolicies: form.rulesPolicies,
-            latitude: form.latitude ? Number(form.latitude) : null,
-            longitude: form.longitude ? Number(form.longitude) : null,
-          }),
-        }
-      )
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9000"
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.message || "Бүртгэл амжилтгүй боллоо")
+      const payload = {
+        karaokeName: form.karaokeName,
+        ownerFullName: form.ownerFullName || user?.fullName || "",
+        phoneNumber: form.phoneNumber,
+        email: form.email || user?.primaryEmailAddress?.emailAddress || "",
+        address: form.address,
+        city: form.city,
+        description: form.description,
+        openingHours: form.openingHours,
+        openingTime: form.openingTime,
+        closingTime: form.closingTime,
+        amenities: form.amenities
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        images: form.images
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        rulesPolicies: form.rulesPolicies,
+        latitude: form.latitude ? Number(form.latitude) : null,
+        longitude: form.longitude ? Number(form.longitude) : null,
       }
 
-      const karaokeId = data?.karaoke?._id
+const res = await fetch(`${apiUrl}/api/onboarding/karaoke`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify(payload),
+})
+
+const contentType = res.headers.get("content-type") || ""
+const data =
+  contentType.includes("application/json") ? await res.json() : await res.text()
+
+if (!res.ok) {
+  const backendMessage =
+    typeof data === "string"
+      ? data
+      : `${data.message || "Request failed"}${data.error ? `: ${data.error}` : ""}`
+
+  throw new Error(backendMessage)
+}
+
+      const karaokeId =
+        typeof data === "string" ? undefined : data.karaoke?._id
+
       if (!karaokeId) {
         throw new Error("Karaoke created but karaoke ID was not returned")
       }
@@ -132,7 +149,7 @@ export default function RegisterKaraokePage() {
   const labelStyle =
     "mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1"
   const inputStyle =
-    "w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3.5 text-sm text-white outline-none focus:border-purple-500/50 transition-all placeholder:text-white/10 backdrop-blur-md"
+    "w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3.5 text-sm text-white outline-none focus:border-purple-500/50 transition-all placeholder:text-white/30 backdrop-blur-md"
 
   return (
     <main className="relative min-h-screen w-full bg-[#0a0118]">

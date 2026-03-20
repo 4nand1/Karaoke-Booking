@@ -12,9 +12,12 @@ export const createKaraoke: RequestHandler = async (req, res) => {
 
     const {
       karaokeName,
+      ownerFullName,
+      email,
       address,
       city,
       phone,
+      phoneNumber,
       description,
       openingHours,
       openingTime,
@@ -31,35 +34,49 @@ export const createKaraoke: RequestHandler = async (req, res) => {
 
     const existing = await KaraokeModel.findOne({ ownerClerkUserId: userId })
     if (existing) {
-      res.status(400).json({ message: "Та аль хэдийн karaoke бүртгүүлсэн байна" })
-      return
+      return res
+        .status(400)
+        .json({ message: "Та аль хэдийн karaoke бүртгүүлсэн байна" })
     }
+
+    const normalizedImages = Array.isArray(images)
+      ? images.filter(Boolean)
+      : []
 
     const karaoke = await KaraokeModel.create({
       ownerClerkUserId: userId,
+      ownerFullName: ownerFullName ?? "",
+      email: email ?? "",
       name: karaokeName,
       address,
       city,
-      phone,
+      phone: phone ?? phoneNumber ?? "",
       description,
       openingHours:
         openingHours || [openingTime, closingTime].filter(Boolean).join(" - "),
-      openingTime: openingTime ?? null,
-      closingTime: closingTime ?? null,
+      openingTime,
+      closingTime,
       roomTypes: Array.isArray(roomTypes) ? roomTypes : [],
-      pricePerHour,
-      capacity,
+      pricePerHour:
+        pricePerHour === undefined || pricePerHour === null || pricePerHour === ""
+          ? null
+          : Number(pricePerHour),
+      capacity:
+        capacity === undefined || capacity === null || capacity === ""
+          ? null
+          : Number(capacity),
       amenities: Array.isArray(amenities) ? amenities : [],
-      images: Array.isArray(images) ? images : [],
+      images: normalizedImages,
+      image: normalizedImages[0] ?? null,
       rulesPolicies: rulesPolicies ?? "",
       approvalStatus: "pending",
       latitude: latitude ?? null,
       longitude: longitude ?? null,
     })
 
-    res.status(201).json(karaoke)
+    return res.status(201).json({ karaoke })
   } catch (error) {
     console.error("createKaraoke error:", error)
-    res.status(500).json({ message: "Failed to create karaoke" })
+    return res.status(500).json({ message: "Failed to create karaoke" })
   }
 }
