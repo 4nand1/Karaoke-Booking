@@ -4,8 +4,8 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Navbar from "@/_components/client/navbar"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, MapPin, Clock, Phone } from "lucide-react"
-import { api } from "@/lib/axios"
+import { ChevronLeft, MapPin, Clock, Phone, Users, Music } from "lucide-react"
+import { apiRootUrl } from "@/lib/api-url"
 
 type KaraokeDetail = {
   _id: string
@@ -22,6 +22,14 @@ type KaraokeDetail = {
   amenities?: string[]
   pricePerHour?: number | null
   capacity?: number | null
+  rooms?: Array<{
+    _id: string
+    name: string
+    type: string
+    price: number
+    capacity: number
+    image: string
+  }>
 }
 
 export default function KaraokePage() {
@@ -39,7 +47,15 @@ export default function KaraokePage() {
         setLoading(true)
         setError("")
 
-        const { data } = await api.get(`/karaoke/${karaokeId}`)
+        const response = await fetch(`${apiRootUrl}/karaoke/${karaokeId}`, {
+          cache: "no-store",
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch karaoke: ${response.status}`)
+        }
+
+        const data = await response.json()
         setKaraoke(data?.karaoke ?? null)
       } catch (err) {
         console.error("Failed to fetch karaoke:", err)
@@ -128,6 +144,43 @@ export default function KaraokePage() {
                       {amenity}
                     </span>
                   ))}
+                </div>
+              )}
+
+              {karaoke.rooms && karaoke.rooms.length > 0 && (
+                <div className="pt-4">
+                  <h2 className="mb-4 text-2xl font-bold">Available Rooms</h2>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {karaoke.rooms.map((room) => (
+                      <div
+                        key={room._id}
+                        className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-lg font-semibold">{room.name}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {room.type}
+                            </p>
+                          </div>
+                          <p className="text-lg font-bold text-primary">
+                            ₮{room.price.toLocaleString()}/hr
+                          </p>
+                        </div>
+
+                        <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <Users className="h-4 w-4" />
+                            {room.capacity} guests
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Music className="h-4 w-4" />
+                            Live room listing
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

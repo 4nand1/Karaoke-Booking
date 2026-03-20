@@ -14,7 +14,9 @@ export const getKaraokeById: RequestHandler = async (req, res) => {
     }
 
     const isOwner = !!userId && karaoke.ownerClerkUserId === userId
-    const isPublic = karaoke.approvalStatus === "approved"
+    const isPublic =
+      karaoke.approvalStatus === "approved" ||
+      karaoke.approvalStatus === "pending"
 
     if (!isOwner && !isPublic) {
       return res.status(404).json({ message: "Karaoke not found" })

@@ -6,10 +6,14 @@ export const getKaraoke: RequestHandler = async (req, res) => {
     const approvalStatus =
       typeof req.query.approvalStatus === "string"
         ? req.query.approvalStatus
-        : "approved"
+        : null
 
     const filters =
-      approvalStatus === "all" ? {} : { approvalStatus }
+      approvalStatus === "all"
+        ? {}
+        : approvalStatus
+          ? { approvalStatus }
+          : { approvalStatus: { $in: ["approved", "pending"] } }
 
     const karaokes = await KaraokeModel.find(filters).sort({ createdAt: -1 })
 

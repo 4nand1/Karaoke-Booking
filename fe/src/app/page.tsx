@@ -28,6 +28,14 @@ type KaraokeListing = {
   image?: string | null
   approvalStatus: "pending" | "approved" | "rejected" | "draft"
   rating?: number | null
+  rooms?: Array<{
+    _id: string
+    name: string
+    type: string
+    price: number
+    capacity: number
+    image: string
+  }>
 }
 
 type KaraokeCardViewModel = {
@@ -40,6 +48,14 @@ type KaraokeCardViewModel = {
   hours: string
   roomSize: "small" | "medium" | "large" | "vip" | "all"
   isOpenNow: boolean
+  rooms: Array<{
+    _id: string
+    name: string
+    type: string
+    price: number
+    capacity: number
+    image: string
+  }>
 }
 
 const FALLBACK_IMAGE = "/karaoke-card-1.jpg"
@@ -79,6 +95,11 @@ function getRoomSize(roomTypes?: string[]): "small" | "medium" | "large" | "vip"
 }
 
 function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
+  const lowestRoomPrice =
+    karaoke.rooms && karaoke.rooms.length > 0
+      ? Math.min(...karaoke.rooms.map((room) => room.price))
+      : null
+
   return {
     id: karaoke._id,
     image: karaoke.image || karaoke.images?.[0] || FALLBACK_IMAGE,
@@ -88,6 +109,8 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
     price:
       typeof karaoke.pricePerHour === "number"
         ? `$${karaoke.pricePerHour}/hr`
+        : typeof lowestRoomPrice === "number" && Number.isFinite(lowestRoomPrice)
+          ? `₮${lowestRoomPrice.toLocaleString()}/hr`
         : "Contact for price",
     hours:
       karaoke.openingHours ||
@@ -95,6 +118,7 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
       "Hours not available",
     roomSize: getRoomSize(karaoke.roomTypes),
     isOpenNow: getIsOpenNow(karaoke.openingTime, karaoke.closingTime),
+    rooms: karaoke.rooms ?? [],
   }
 }
 
@@ -227,6 +251,7 @@ const Index = () => {
                 rating={spot.rating}
                 price={spot.price}
                 hours={spot.hours}
+                rooms={spot.rooms}
                 index={i}
               />
             ))}
@@ -262,6 +287,7 @@ const Index = () => {
                 rating={spot.rating}
                 price={spot.price}
                 hours={spot.hours}
+                rooms={spot.rooms}
                 index={i}
               />
             ))}

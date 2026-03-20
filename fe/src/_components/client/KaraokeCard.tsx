@@ -16,6 +16,14 @@ interface KaraokeCardProps {
   price: string
   hours: string
   index: number
+  rooms: Array<{
+    _id: string
+    name: string
+    type: string
+    price: number
+    capacity: number
+    image: string
+  }>
 }
 
 const KaraokeCard = ({
@@ -26,6 +34,7 @@ const KaraokeCard = ({
   rating,
   price,
   hours,
+  rooms,
   index,
 }: KaraokeCardProps) => {
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -97,6 +106,15 @@ const KaraokeCard = ({
         rating={rating ?? 0}
         price={price}
         hours={hours}
+        karaokeId={id}
+        rooms={rooms.map((room) => ({
+          _id: room._id,
+          name: room.name,
+          capacity: `${room.capacity} guests`,
+          price: `₮${room.price.toLocaleString()}/hr`,
+          type: room.type,
+          features: [room.type, `${room.capacity} guests`],
+        }))}
       />
     </>
   )
