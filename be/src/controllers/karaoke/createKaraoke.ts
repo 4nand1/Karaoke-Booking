@@ -32,13 +32,6 @@ export const createKaraoke: RequestHandler = async (req, res) => {
       longitude,
     } = req.body
 
-    const existing = await KaraokeModel.findOne({ ownerClerkUserId: userId })
-    if (existing) {
-      return res
-        .status(400)
-        .json({ message: "Та аль хэдийн karaoke бүртгүүлсэн байна" })
-    }
-
     const normalizedImages = Array.isArray(images)
       ? images.filter(Boolean)
       : []

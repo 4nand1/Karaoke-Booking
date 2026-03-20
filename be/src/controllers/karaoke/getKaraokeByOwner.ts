@@ -15,7 +15,9 @@ export const getKaraokeByOwner: RequestHandler = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" })
     }
 
-    const karaoke = await KaraokeModel.findOne({ ownerClerkUserId })
+    const karaoke = await KaraokeModel.findOne({ ownerClerkUserId }).sort({
+      createdAt: -1,
+    })
 
     if (!karaoke) {
       return res.status(404).json({ message: "Karaoke not found" })

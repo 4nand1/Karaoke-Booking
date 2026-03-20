@@ -111,11 +111,6 @@ router.post("/karaoke", async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" })
     }
 
-    const existing = await KaraokeModel.findOne({ ownerClerkUserId: userId })
-    if (existing) {
-      return res.status(409).json({ message: "Karaoke already registered" })
-    }
-
     const karaoke = await KaraokeModel.create({
       ownerClerkUserId: userId,
       ownerFullName: resolvedOwnerFullName,

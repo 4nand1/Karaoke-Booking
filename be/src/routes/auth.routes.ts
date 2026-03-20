@@ -45,7 +45,9 @@ const loadCurrentUserState = async (userId: string) => {
     })
   }
 
-  const karaoke = await KaraokeModel.findOne({ ownerClerkUserId: userId })
+  const karaoke = await KaraokeModel.findOne({ ownerClerkUserId: userId }).sort({
+    createdAt: -1,
+  })
 
   const rawRole = String((profile as any).role)
   const updates: Record<string, unknown> = {}
