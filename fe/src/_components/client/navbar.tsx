@@ -110,8 +110,10 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
 
           {/* Location button */}
-          <Button variant="glass" size="icon" className="rounded-xl" type="button">
-            <MapPin className="h-5 w-5 text-foreground" />
+          <Button asChild variant="glass" size="icon" className="rounded-xl">
+            <Link href="/map" aria-label="Open map page">
+              <MapPin className="h-5 w-5 text-foreground" />
+            </Link>
           </Button>
 
           {/* User dropdown */}
