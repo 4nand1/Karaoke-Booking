@@ -279,7 +279,7 @@ export default function MapPreview() {
         </motion.div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[320px_1fr] lg:items-start">
-          <div className="space-y-3 lg:max-h-[520px] lg:overflow-y-auto lg:pr-1">
+          <div className="order-2 space-y-3 lg:order-1 lg:max-h-[520px] lg:overflow-y-auto lg:pr-1">
             {loading ? (
               <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground shadow-sm">
                 Loading nearby karaoke venues...
@@ -339,7 +339,7 @@ export default function MapPreview() {
             )}
           </div>
 
-          <div className="rounded-3xl border border-border bg-card shadow-sm">
+          <div className="order-1 rounded-3xl border border-border bg-card shadow-sm lg:order-2">
             <div className="relative h-[420px] overflow-hidden rounded-3xl md:h-[500px] lg:h-[520px]">
               <Map
                 center={mapCenter}
