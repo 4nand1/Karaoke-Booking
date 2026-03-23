@@ -26,13 +26,11 @@ app.get("/", (req, res) => {
   res.send("Karaoke booking backend is running");
 });
 
-app.use("/orders", OrderRouter);
-app.use("/karaoke", KaraokeRouter);
-app.use("/orders", OrderRouter);
-app.use("/karaoke", KaraokeRouter);
-app.use("/karaoke/:id/rooms", RoomRouter);
-app.use("/categories", CategoryRouter);
-app.use("/karaoke/:id/menu", MenuRouter);
+app.use("/api/orders", OrderRouter);
+app.use("/api/karaoke", KaraokeRouter);
+app.use("/api/karaoke/:id/rooms", RoomRouter);
+app.use("/api/karaoke/:id/menu", MenuRouter);
+app.use("/api/categories", CategoryRouter);
 
 const PORT = process.env.PORT || 5000;
 

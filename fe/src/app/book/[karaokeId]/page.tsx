@@ -218,19 +218,19 @@ export default function BookingPage() {
       setSubmitting(true);
       setFeedback(null);
 
-      const response = await api.post("/booking", {
-        karaokeId: karaoke._id,
-        roomId: selectedRoom._id,
-        customerName: formData.customerName.trim(),
-        customerPhone: formData.customerPhone.trim(),
-        bookingDate: formData.bookingDate,
-        bookingSlots: selectedSlots,
-        guestCount: Number(formData.guestCount) || 1,
-      });
+      const response = await api.post("/orders", {
+  karaokeId: karaoke._id,
+  roomId: selectedRoom._id,
+  customerName: formData.customerName.trim(),
+  customerPhone: formData.customerPhone.trim(),
+  bookingDate: formData.bookingDate,
+  bookingSlots: selectedSlots,
+  guestCount: Number(formData.guestCount) || 1,
+})
 
-      if (!response.data?.success) {
-        throw new Error("Failed to create booking");
-      }
+if (!response.data?.success) {
+  throw new Error("Failed to create booking")
+}
 
       router.push("/my-bookings");
     } catch (error) {

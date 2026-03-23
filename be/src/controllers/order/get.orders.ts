@@ -1,15 +1,19 @@
-import type { RequestHandler } from "express";
-import { OrderModel } from "../../database/schema/order.schema";
+import type { RequestHandler } from "express"
+import { OrderModel } from "../../database/schema/order.schema"
 
 export const getOrders: RequestHandler = async (req, res) => {
-  const user = (req as unknown as { user: any }).user;
-  const userId = (req as unknown as { userId?: string }).userId || user?._id;
+  try {
+    const { karaokeId } = req.query
 
-  if (!userId) {
-    return res.status(401).json({ message: "Unauthorized" });
+    if (karaokeId) {
+      const orders = await OrderModel.find({ karaokeId })
+      return res.status(200).json(orders)
+    }
+
+    const orders = await OrderModel.find({})
+    return res.status(200).json(orders)
+  } catch (error) {
+    console.error("getOrders error:", error)
+    return res.status(500).json({ message: "Failed to get orders" })
   }
-
-  const orders = await OrderModel.find({ userId })
-
-  res.status(200).json(orders);
-};
+}
