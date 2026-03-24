@@ -14,6 +14,7 @@ import { MenuRouter } from "./src/routes/menuRouter"
 import reviewRouter from "./src/routes/review.routes"
 import { KaraokeRouter } from "./src/routes/karaokeRoutes"
 import bookingRoutes from "./src/routes/booking.routes"
+import { OrderRouter } from "./src/routes/order.router"
 
 const app = express()
 
@@ -56,6 +57,7 @@ app.use("/api/reviews", reviewRouter)
 app.use("/api/booking", bookingRoutes)
 app.use("/api/bookings", bookingRoutes)
 app.use("/karaoke", KaraokeRouter)
+app.use("/api/orders", OrderRouter)
 
 app.use(
   (

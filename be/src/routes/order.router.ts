@@ -1,11 +1,12 @@
-import { Router } from "express";
-import { getOrders } from "../controllers/order/get.orders";
-import { createOrders } from "../controllers/order/create.orders";
+import { Router } from "express"
+import { getOrders } from "../controllers/order/get.orders"
+import { createOrders } from "../controllers/order/create.orders"
+import { updateOrder } from "../controllers/order/update.order"
 
-
-const OrderRouter = Router();
+const OrderRouter = Router()
 
 OrderRouter.get("/", getOrders)
-  .post("/create", createOrders);
+  .post("/", createOrders)
+    .put("/:id", updateOrder)
 
-export { OrderRouter };
+export { OrderRouter }

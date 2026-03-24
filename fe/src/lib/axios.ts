@@ -1,8 +1,8 @@
 import axios from "axios"
 
 const rawApiUrl =
-  process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:9000"
-
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:9000"
+  
 const normalizedApiUrl = rawApiUrl.replace(/\/+$/, "")
 const apiBaseUrl = normalizedApiUrl.endsWith("/api")
   ? normalizedApiUrl

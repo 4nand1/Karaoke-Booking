@@ -45,7 +45,6 @@ type UserLocation = {
 
 function createKaraokeIcon(L: typeof import("leaflet"), isActive = false) {
   const size = isActive ? 34 : 28;
-
   return L.divIcon({
     className: "custom-marker-root",
     html: `
