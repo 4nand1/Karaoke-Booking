@@ -1,7 +1,16 @@
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
+import { clerkEnabled } from "@/lib/clerk-config"
 
 export default async function DashboardPage() {
+  if (!clerkEnabled) {
+    return (
+      <main className="mx-auto max-w-4xl p-6">
+        Authentication is not configured for this environment yet.
+      </main>
+    )
+  }
+
   const { userId } = await auth()
 
   if (!userId) {

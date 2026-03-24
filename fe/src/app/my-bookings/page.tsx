@@ -1,7 +1,16 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
+import { clerkEnabled } from "@/lib/clerk-config"
 
 export default async function MyBookingsPage() {
+  if (!clerkEnabled) {
+    return (
+      <main className="max-w-4xl mx-auto p-6">
+        Authentication is not configured for this environment yet.
+      </main>
+    )
+  }
+
   const { userId } = await auth()
 
   if (!userId) {

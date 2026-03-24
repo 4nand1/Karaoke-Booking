@@ -18,6 +18,7 @@ import {
   BadgeCheck,
 } from "lucide-react"
 import { SignOutButton, useUser } from "@clerk/nextjs"
+import { clerkEnabled } from "@/lib/clerk-config"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -35,7 +36,26 @@ type PublicMetadata = {
 }
 
 export default function Navbar() {
+  if (!clerkEnabled) {
+    return <NavbarInner isSignedIn={false} />
+  }
+
+  return <NavbarWithClerk />
+}
+
+function NavbarWithClerk() {
   const { user, isSignedIn } = useUser()
+
+  return <NavbarInner user={user} isSignedIn={Boolean(isSignedIn)} />
+}
+
+function NavbarInner({
+  user,
+  isSignedIn,
+}: {
+  user?: ReturnType<typeof useUser>["user"] | null
+  isSignedIn: boolean
+}) {
 
   const [dark, setDark] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -183,12 +203,14 @@ export default function Navbar() {
 
                   <DropdownMenuSeparator />
 
-                  <SignOutButton redirectUrl="/">
-                    <DropdownMenuItem className="cursor-pointer">
-                      <LogOut className="h-4 w-4" />
-                      Log out
-                    </DropdownMenuItem>
-                  </SignOutButton>
+                  {clerkEnabled && (
+                    <SignOutButton redirectUrl="/">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <LogOut className="h-4 w-4" />
+                        Log out
+                      </DropdownMenuItem>
+                    </SignOutButton>
+                  )}
                 </>
               ) : (
                 /* 👤 CUSTOMER (or pending owner) */
@@ -207,12 +229,14 @@ export default function Navbar() {
                     </DropdownMenuItem>
                   )}
 
-                  <SignOutButton redirectUrl="/">
-                    <DropdownMenuItem className="cursor-pointer">
-                      <LogOut className="h-4 w-4" />
-                      Log out
-                    </DropdownMenuItem>
-                  </SignOutButton>
+                  {clerkEnabled && (
+                    <SignOutButton redirectUrl="/">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <LogOut className="h-4 w-4" />
+                        Log out
+                      </DropdownMenuItem>
+                    </SignOutButton>
+                  )}
 
                   <DropdownMenuItem asChild>
                     <Link

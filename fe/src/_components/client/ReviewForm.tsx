@@ -6,6 +6,7 @@ import { Star, Send, Trash2, LogIn } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/axios";
+import { clerkEnabled } from "@/lib/clerk-config";
 
 interface Review {
   _id?: string;
@@ -28,7 +29,7 @@ type ReviewApiResponse = {
   text?: string;
   createdAt?: string;
   karaokeId?: string;
-  userId?: string;
+  userId?: string | null;
 };
 
 const formatReview = (review: ReviewApiResponse): Review => {
@@ -52,12 +53,36 @@ const formatReview = (review: ReviewApiResponse): Review => {
     timestamp,
     createdAt: review.createdAt,
     karaokeId: review.karaokeId,
-    userId: review.userId,
+    userId: review.userId ?? undefined,
   };
 };
 
-const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
+type ReviewFormInnerProps = {
+  karaokeId?: string;
+  isSignedIn: boolean;
+  isLoaded: boolean;
+  userId?: string | null;
+};
+
+function ReviewFormWithClerk({ karaokeId }: { karaokeId?: string }) {
   const { isSignedIn, isLoaded, user } = useUser();
+
+  return (
+    <ReviewFormInner
+      karaokeId={karaokeId}
+      isSignedIn={Boolean(isSignedIn)}
+      isLoaded={Boolean(isLoaded)}
+      userId={user?.id}
+    />
+  );
+}
+
+const ReviewFormInner = ({
+  karaokeId,
+  isSignedIn,
+  isLoaded,
+  userId,
+}: ReviewFormInnerProps) => {
   const router = useRouter();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +159,7 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
       try {
         await api.delete(`/reviews/${id}`, {
           data: {
-            userId: user?.id,
+            userId,
           },
         });
       } catch {
@@ -175,7 +200,7 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
         name: formData.name,
         rating: formData.rating,
         text: formData.text,
-        userId: user?.id,
+        userId,
         ...(karaokeId && { karaokeId }),
       };
 
@@ -402,7 +427,7 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
                   }}
                   className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors ml-2"
                   title="Delete review"
-                  style={{ display: user?.id === review.userId ? "block" : "none" }}
+                  style={{ display: userId === review.userId ? "block" : "none" }}
                 >
                   <Trash2 className="h-5 w-5" />
                 </button>
@@ -429,4 +454,17 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
   );
 };
 
-export default ReviewForm;
+export default function ReviewForm({ karaokeId }: { karaokeId?: string }) {
+  if (!clerkEnabled) {
+    return (
+      <ReviewFormInner
+        karaokeId={karaokeId}
+        isSignedIn={false}
+        isLoaded={true}
+        userId={null}
+      />
+    );
+  }
+
+  return <ReviewFormWithClerk karaokeId={karaokeId} />;
+}

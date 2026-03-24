@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import { Star } from "lucide-react"
 import Iridescence from "@/components/Iridescence"
 import { apiBaseUrl } from "@/lib/api-url"
+import { clerkEnabled } from "@/lib/clerk-config"
 
 type KaraokeForm = {
   karaokeName: string
@@ -27,6 +28,14 @@ type KaraokeForm = {
 }
 
 export default function RegisterKaraokePage() {
+  if (!clerkEnabled) {
+    return (
+      <main className="flex min-h-screen items-center justify-center p-6 text-center">
+        Authentication is not configured for this environment yet.
+      </main>
+    )
+  }
+
   const router = useRouter()
   const { getToken } = useAuth()
   const { isSignedIn, user } = useUser()

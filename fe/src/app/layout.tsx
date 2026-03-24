@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { Toaster } from "@/components/ui/sonner"
+import { clerkEnabled } from "@/lib/clerk-config"
 import "./globals.css"
 import "leaflet/dist/leaflet.css";
 
@@ -12,14 +13,22 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const content = (
+    <html lang="en">
+      <body>
+        {children}
+        <Toaster position="bottom-right" richColors />
+      </body>
+    </html>
+  )
+
+  if (!clerkEnabled) {
+    return content
+  }
+
   return (
     <ClerkProvider>
-      <html lang="en">
-        <body>
-          {children}
-          <Toaster position="bottom-right" richColors />
-        </body>
-      </html>
+      {content}
     </ClerkProvider>
   )
 }

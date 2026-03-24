@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
+import { clerkEnabled } from "@/lib/clerk-config"
 
 type ProfileResponse = {
   profile?: {
@@ -11,6 +12,10 @@ type ProfileResponse = {
 }
 
 async function getProfile() {
+  if (!clerkEnabled) {
+    return null
+  }
+
   const { userId, getToken } = await auth()
 
   if (!userId) redirect("/sign-in")
@@ -30,6 +35,19 @@ async function getProfile() {
 }
 
 export default async function ProfilePage() {
+  if (!clerkEnabled) {
+    return (
+      <main className="max-w-xl mx-auto p-6">
+        <div className="border rounded-2xl p-6">
+          <h1 className="text-xl font-bold">Profile</h1>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Authentication is not configured for this environment yet.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
   const data = await getProfile()
 
   return (

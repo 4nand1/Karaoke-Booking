@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { apiRootUrl } from "@/lib/api-url"
+import { clerkEnabled } from "@/lib/clerk-config"
 
 type AdminProfileResponse = {
   profile?: {
@@ -94,6 +95,14 @@ async function getOwnerBookings(ownerClerkUserId?: string) {
 }
 
 export default async function AdminDashboardPage() {
+  if (!clerkEnabled) {
+    return (
+      <main className="mx-auto max-w-6xl p-6">
+        Authentication is not configured for this environment yet.
+      </main>
+    )
+  }
+
   const data = await getAdminData()
 
   if (!data?.profile) {
