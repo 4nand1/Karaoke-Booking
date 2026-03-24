@@ -10,6 +10,9 @@ import Footer from "@/_components/client/Footer"
 import { motion } from "framer-motion"
 import { useEffect, useMemo, useState } from "react"
 import { apiRootUrl } from "@/lib/api-url"
+import dynamic from "next/dynamic"
+
+const MapPreview = dynamic(() => import("@/_components/client/MapPreview"), { ssr: false })
 
 type KaraokeListing = {
   _id: string
