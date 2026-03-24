@@ -24,18 +24,8 @@ export default function PostAuthPage() {
         },
       })
 
-      if (!res.ok) {
-        router.replace("/dashboard")
-        return
-      }
-
-      const data = await res.json()
-
-      if (data.profile?.role === "admin") {
-        router.replace("/admin/dashboard")
-      } else {
-        router.replace("/dashboard")
-      }
+      // Redirect to home regardless of the result
+      router.replace("/")
     }
 
     run()
