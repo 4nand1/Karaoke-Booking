@@ -3,13 +3,8 @@
 import { useEffect } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { clerkEnabled } from "@/lib/clerk-config"
 
 export default function PostAuthPage() {
-  if (!clerkEnabled) {
-    return <div className="p-6">Authentication is not configured.</div>
-  }
-
   const router = useRouter()
   const { getToken, isLoaded } = useAuth()
 

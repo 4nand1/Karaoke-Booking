@@ -6,7 +6,6 @@ import { Star, Send, Trash2, LogIn } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/axios";
-import { clerkEnabled } from "@/lib/clerk-config";
 
 interface SiteReview {
   _id?: string;
@@ -27,7 +26,7 @@ type ReviewApiResponse = {
   rating?: number;
   text?: string;
   createdAt?: string;
-  userId?: string | null;
+  userId?: string;
 };
 
 const formatReview = (review: ReviewApiResponse): SiteReview => {
@@ -50,29 +49,12 @@ const formatReview = (review: ReviewApiResponse): SiteReview => {
     text: review.text?.trim() || "",
     timestamp,
     createdAt: review.createdAt,
-    userId: review.userId ?? undefined,
+    userId: review.userId,
   };
 };
 
-type SiteReviewsInnerProps = {
-  isSignedIn: boolean;
-  isLoaded: boolean;
-  userId?: string | null;
-};
-
-function SiteReviewsWithClerk() {
+const SiteReviews = () => {
   const { isSignedIn, isLoaded, user } = useUser();
-
-  return (
-    <SiteReviewsInner
-      isSignedIn={Boolean(isSignedIn)}
-      isLoaded={Boolean(isLoaded)}
-      userId={user?.id}
-    />
-  );
-}
-
-const SiteReviewsInner = ({ isSignedIn, isLoaded, userId }: SiteReviewsInnerProps) => {
   const router = useRouter();
   const [reviews, setReviews] = useState<SiteReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,7 +145,7 @@ const SiteReviewsInner = ({ isSignedIn, isLoaded, userId }: SiteReviewsInnerProp
         name: formData.name,
         rating: formData.rating,
         text: formData.text,
-        userId,
+        userId: user?.id,
       };
 
       let newReview: SiteReview;
@@ -375,7 +357,7 @@ const SiteReviewsInner = ({ isSignedIn, isLoaded, userId }: SiteReviewsInnerProp
                       </p>
                     </div>
                   </div>
-                  {review.userId && userId === review.userId && (
+                  {review.userId && user?.id === review.userId && (
                     <button
                       onClick={() => {
                         const reviewId = review._id || review.id;
@@ -412,10 +394,4 @@ const SiteReviewsInner = ({ isSignedIn, isLoaded, userId }: SiteReviewsInnerProp
   );
 };
 
-export default function SiteReviews() {
-  if (!clerkEnabled) {
-    return <SiteReviewsInner isSignedIn={false} isLoaded={true} userId={null} />;
-  }
-
-  return <SiteReviewsWithClerk />;
-}
+export default SiteReviews;
