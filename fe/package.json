@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "setup:env": "sh -c '[ -f .env.local ] || cp .env.example .env.local'"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

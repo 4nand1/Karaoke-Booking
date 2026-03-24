@@ -83,6 +83,7 @@ app.use(
 
 const PORT = process.env.PORT || 9000
 const DB_RETRY_DELAY_MS = 5000
+const mongoUri = process.env.MONGODB_URI?.trim()
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
@@ -92,6 +93,11 @@ app.listen(PORT, () => {
 })
 
 async function connectDatabaseWithRetry() {
+  if (!mongoUri) {
+    console.warn("MONGODB_URI is missing in backend .env. Continuing without database.")
+    return
+  }
+
   while (true) {
     try {
       await connectDB()
