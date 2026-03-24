@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node server.ts",
-    "setup:env": "sh -c '[ -f .env ] || cp .env.example .env'"
+    "dev": "nodemon --exec ts-node server.ts"
   },
   "keywords": [],
   "author": "",
