@@ -1,8 +1,17 @@
 import { RequestHandler } from "express"
 import { KaraokeModel } from "../../models/Karaoke"
+import { isDatabaseConnected } from "../../config/db"
 
 export const getKaraoke: RequestHandler = async (req, res) => {
   try {
+    if (!isDatabaseConnected()) {
+      return res.status(200).json({
+        karaokes: [],
+        degraded: true,
+        message: "Database is not connected yet",
+      })
+    }
+
     const approvalStatus =
       typeof req.query.approvalStatus === "string"
         ? req.query.approvalStatus

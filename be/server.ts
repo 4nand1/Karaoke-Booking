@@ -24,14 +24,17 @@ const publishableKey =
   process.env.CLERK_PUBLISHABLE_KEY ||
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 const secretKey = process.env.CLERK_SECRET_KEY
-
-if (!secretKey) {
-  throw new Error("Missing CLERK_SECRET_KEY in backend .env")
-}
+const clerkEnabled = Boolean(secretKey)
 
 if (!publishableKey) {
   console.warn(
     "CLERK_PUBLISHABLE_KEY is missing in backend .env, continuing with CLERK_SECRET_KEY only"
+  )
+}
+
+if (!clerkEnabled) {
+  console.warn(
+    "CLERK_SECRET_KEY is missing in backend .env. Auth routes will be limited until it is configured."
   )
 }
 
@@ -45,12 +48,14 @@ app.use(
 app.use("/api/payments", paymentRouter)
 app.use(express.json())
 
-app.use(
-  clerkMiddleware({
-    secretKey,
-    ...(publishableKey ? { publishableKey } : {}),
-  })
-)
+if (clerkEnabled) {
+  app.use(
+    clerkMiddleware({
+      secretKey,
+      ...(publishableKey ? { publishableKey } : {}),
+    })
+  )
+}
 
 app.use("/api", authRoutes)
 app.use("/api/onboarding", onboardingRoutes)
