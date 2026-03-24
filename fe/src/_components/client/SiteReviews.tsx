@@ -7,7 +7,7 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/axios";
 
-interface Review {
+interface SiteReview {
   _id?: string;
   id?: number;
   name: string;
@@ -16,7 +16,6 @@ interface Review {
   text: string;
   timestamp: string;
   createdAt?: string;
-  karaokeId?: string;
   userId?: string;
 }
 
@@ -27,11 +26,10 @@ type ReviewApiResponse = {
   rating?: number;
   text?: string;
   createdAt?: string;
-  karaokeId?: string;
   userId?: string;
 };
 
-const formatReview = (review: ReviewApiResponse): Review => {
+const formatReview = (review: ReviewApiResponse): SiteReview => {
   const safeName = review.name?.trim() || "Anonymous";
   const safeCreatedAt = review.createdAt ? new Date(review.createdAt) : null;
   const timestamp =
@@ -51,15 +49,14 @@ const formatReview = (review: ReviewApiResponse): Review => {
     text: review.text?.trim() || "",
     timestamp,
     createdAt: review.createdAt,
-    karaokeId: review.karaokeId,
     userId: review.userId,
   };
 };
 
-const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
+const SiteReviews = () => {
   const { isSignedIn, isLoaded, user } = useUser();
   const router = useRouter();
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<SiteReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
@@ -72,50 +69,27 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
 
   const [hoverRating, setHoverRating] = useState(0);
 
-  const storageKey = karaokeId ? `karaokeReviews_${karaokeId}` : "karaokeReviews";
-
   // Load reviews on mount
   useEffect(() => {
     fetchReviews();
-  }, [karaokeId]);
+  }, []);
 
   const fetchReviews = async () => {
     try {
       setLoading(true);
       // Try to fetch from backend
       try {
-        const url = karaokeId ? `/reviews?karaokeId=${karaokeId}` : "/reviews";
-        const response = await api.get(url);
+        const response = await api.get("/site-reviews");
         const reviewsData = Array.isArray(response.data?.data) ? response.data.data : [];
         const transformedReviews = reviewsData.map(formatReview);
 
-        // Get local reviews to merge with backend data
-        const savedReviews = localStorage.getItem(storageKey);
-        let localReviews: Review[] = [];
-        if (savedReviews) {
-          try {
-            localReviews = JSON.parse(savedReviews);
-          } catch (e) {
-            console.log("Failed to parse local reviews");
-          }
-        }
-
-        // Merge: add local reviews that aren't in backend (e.g., pending uploads)
-        const mergedReviews = transformedReviews;
-        for (const localReview of localReviews) {
-          const exists = transformedReviews.some((r: Review) => r._id === localReview._id || r.id === localReview.id);
-          if (!exists) {
-            mergedReviews.push(localReview);
-          }
-        }
-
-        setReviews(mergedReviews);
-        // Update localStorage with merged data
-        localStorage.setItem(storageKey, JSON.stringify(mergedReviews));
+        setReviews(transformedReviews);
+        // Save to localStorage as backup
+        localStorage.setItem("siteReviews", JSON.stringify(transformedReviews));
       } catch {
         // Fallback to localStorage if API fails
         console.log("API unavailable, using localStorage");
-        const savedReviews = localStorage.getItem(storageKey);
+        const savedReviews = localStorage.getItem("siteReviews");
         if (savedReviews) {
           const parsedReviews = JSON.parse(savedReviews);
           setReviews(Array.isArray(parsedReviews) ? parsedReviews.map(formatReview) : []);
@@ -132,11 +106,7 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
     try {
       // Try to delete from backend
       try {
-        await api.delete(`/reviews/${id}`, {
-          data: {
-            userId: user?.id,
-          },
-        });
+        await api.delete(`/site-reviews/${id}`);
       } catch {
         console.log("API unavailable, using localStorage");
       }
@@ -146,7 +116,7 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
         return reviewId !== id;
       });
       setReviews(updatedReviews);
-      localStorage.setItem(storageKey, JSON.stringify(updatedReviews));
+      localStorage.setItem("siteReviews", JSON.stringify(updatedReviews));
     } catch (error) {
       console.error("Error deleting review:", error);
       alert("Failed to delete review");
@@ -176,14 +146,13 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
         rating: formData.rating,
         text: formData.text,
         userId: user?.id,
-        ...(karaokeId && { karaokeId }),
       };
 
-      let newReview: Review;
+      let newReview: SiteReview;
       
       // Try to save to backend
       try {
-        const response = await api.post("/reviews", newReviewData);
+        const response = await api.post("/site-reviews", newReviewData);
         newReview = formatReview(response.data?.data ?? newReviewData);
       } catch {
         // Fallback: create review locally
@@ -198,7 +167,7 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
       // Update state and localStorage
       const updatedReviews = [newReview, ...reviews];
       setReviews(updatedReviews);
-      localStorage.setItem(storageKey, JSON.stringify(updatedReviews));
+      localStorage.setItem("siteReviews", JSON.stringify(updatedReviews));
       
       // Clear form
       setFormData({
@@ -206,9 +175,6 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
         rating: 5,
         text: "",
       });
-
-      // Refresh reviews from backend to ensure sync
-      await fetchReviews();
     } catch (error) {
       console.error("Error submitting review:", error);
       alert("Failed to submit review");
@@ -225,11 +191,9 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
         viewport={{ once: true }}
       >
         <h2 className="font-display text-3xl font-bold text-foreground md:text-4xl">
-          {karaokeId ? 'Customer' : 'What Our'} <span className="text-primary">{karaokeId ? 'Reviews' : 'Singers'}</span> {karaokeId ? '' : 'Say'}
+          What Our <span className="text-primary">Users</span> Say
         </h2>
-        <p className="mt-2 text-muted-foreground">
-          {karaokeId ? 'Reviews for this karaoke venue' : 'Real reviews from real karaoke lovers'}
-        </p>
+        <p className="mt-2 text-muted-foreground">Real feedback about KaraokeNow platform</p>
       </motion.div>
 
       {/* Sign In Prompt Modal */}
@@ -274,7 +238,7 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
         viewport={{ once: true }}
         className="mt-8 rounded-2xl bg-card p-8 shadow-md"
       >
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" aria-disabled={!isLoaded}>
           <div>
             <label className="block text-sm font-semibold text-card-foreground mb-2">
               Your Name
@@ -328,7 +292,7 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
               onChange={(e) =>
                 setFormData({ ...formData, text: e.target.value })
               }
-              placeholder="Share your karaoke experience... (minimum 10 characters)"
+              placeholder="Share your experience with KaraokeNow... (minimum 10 characters)"
               rows={4}
               className="w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -365,63 +329,64 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
             className="rounded-2xl bg-card p-12 shadow-md text-center"
           >
             <p className="text-lg text-muted-foreground">
-              No reviews yet. Be the first to share your karaoke experience!
+              No reviews yet. Be the first to share your feedback about KaraokeNow!
             </p>
           </motion.div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {reviews.map((review, i) => (
-            <motion.div
-              key={review._id || review.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="card-hover rounded-2xl bg-card p-6 shadow-md"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                    {review.avatar}
+              <motion.div
+                key={review._id || review.id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="card-hover rounded-2xl bg-card p-6 shadow-md"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                      {review.avatar}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-card-foreground">
+                        {review.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {review.timestamp}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-card-foreground">
-                      {review.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {review.timestamp}
-                    </p>
-                  </div>
+                  {review.userId && user?.id === review.userId && (
+                    <button
+                      onClick={() => {
+                        const reviewId = review._id || review.id;
+                        if (reviewId) {
+                          deleteReview(reviewId);
+                        }
+                      }}
+                      className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors ml-2"
+                      title="Delete review"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  )}
                 </div>
-                <button
-                  onClick={() => {
-                    const reviewId = review._id || review.id;
-                    if (reviewId) {
-                      deleteReview(reviewId);
-                    }
-                  }}
-                  className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors ml-2"
-                  title="Delete review"
-                  style={{ display: user?.id === review.userId ? "block" : "none" }}
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
 
-              <div className="mt-3 flex items-center gap-1">
-                {Array.from({ length: review.rating }).map((_, j) => (
-                  <Star
-                    key={j}
-                    className="h-4 w-4 fill-primary text-primary"
-                  />
-                ))}
-              </div>
+                <div className="mt-3 flex items-center gap-1">
+                  {Array.from({ length: review.rating }).map((_, j) => (
+                    <Star
+                      key={j}
+                      className="h-4 w-4 fill-primary text-primary"
+                    />
+                  ))}
+                </div>
 
-              <p className="mt-4 text-sm leading-relaxed text-card-foreground">
-                {review.text}
-              </p>
-            </motion.div>
-          ))}
+                <p className="mt-4 text-sm leading-relaxed text-card-foreground">
+                  {review.text}
+                </p>
+              </motion.div>
+            ))}
           </div>
         )}
       </div>
@@ -429,4 +394,4 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
   );
 };
 
-export default ReviewForm;
+export default SiteReviews;

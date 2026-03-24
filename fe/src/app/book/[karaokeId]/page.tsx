@@ -15,6 +15,7 @@ import {
 import { api } from "@/lib/axios";
 import { apiRootUrl } from "@/lib/api-url";
 import { Button } from "@/components/ui/button";
+import ReviewForm from "@/_components/client/ReviewForm";
 
 type Room = {
   _id: string;
@@ -576,6 +577,8 @@ export default function BookingPage() {
           </Button>
         </section>
       </div>
+
+      <ReviewForm karaokeId={karaokeId} />
     </main>
   );
 }
