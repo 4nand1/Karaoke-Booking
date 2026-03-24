@@ -205,12 +205,11 @@ const Index = () => {
     return filtered
   }, [filters, mappedKaraokes])
 
-  const featuredSpots = useMemo(() => mappedKaraokes.slice(0, 3), [mappedKaraokes])
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <HeroCarousel />
+      <MapPreview />
 
       <section className="container mx-auto px-6 py-16">
         <motion.div
@@ -258,41 +257,6 @@ const Index = () => {
           </div>
         )}
       </section>
-
-      <MapPreview />
-
-      {featuredSpots.length > 0 && (
-        <section className="container mx-auto px-6 py-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="font-display text-3xl font-bold text-foreground md:text-4xl">
-              Featured <span className="text-primary">Karaoke</span>
-            </h2>
-            <p className="mt-2 text-muted-foreground">
-              Real listings highlighted from the current approved catalogue
-            </p>
-          </motion.div>
-
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredSpots.map((spot, i) => (
-              <KaraokeCard
-                key={`featured-${spot.id}`}
-                id={spot.id}
-                image={spot.image}
-                name={spot.name}
-                location={spot.location}
-                rating={spot.rating}
-                price={spot.price}
-                hours={spot.hours}
-                index={i}
-              />
-            ))}
-          </div>
-        </section>
-      )}
 <SiteReviews/>
     
       <Footer />

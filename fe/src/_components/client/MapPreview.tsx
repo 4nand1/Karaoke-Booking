@@ -2,110 +2,27 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Clock3, MapPin, Navigation } from "lucide-react";
 import type { LatLngExpression, DivIcon } from "leaflet";
 import { Marker, Popup } from "react-leaflet";
 import { useRouter } from "next/navigation";
 import { Map, MapTileLayer, MapZoomControl } from "@/components/ui/map";
-import { getDistanceKm } from "@/lib/distance";
-import { apiRootUrl } from "@/lib/api-url";
+import { apiBaseUrl, apiRootUrl } from "@/lib/api-url";
 import MapAutoFit from "./MapAutoFit";
-
-type Karaoke = {
-  _id: string;
-  name: string;
-  address: string;
-  city: string;
-  phone: string;
-  description: string;
-  openingTime: string;
-  closingTime: string;
-  latitude?: number | null;
-  longitude?: number | null;
-  ownerClerkUserId?: string;
-  image?: string | null;
-  rooms?: Array<{
-    _id: string;
-    name: string;
-    type: string;
-    price: number;
-    capacity: number;
-    image: string;
-  }>;
-};
-
-type KaraokeWithDistance = Karaoke & {
-  distance?: number;
-};
-
-type UserLocation = {
-  latitude: number;
-  longitude: number;
-};
-
-function createKaraokeIcon(L: typeof import("leaflet"), isActive = false) {
-  const size = isActive ? 34 : 28;
-  return L.divIcon({
-    className: "custom-marker-root",
-    html: `
-      <div
-        style="
-          position: relative;
-          width: ${size}px;
-          height: ${size}px;
-          background: #ff2f92;
-          border-radius: ${size}px ${size}px ${size}px 0;
-          transform: rotate(-45deg);
-          box-shadow: 0 10px 24px rgba(0,0,0,0.28);
-          border: 3px solid #ffffff;
-        "
-      >
-        <div
-          style="
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: ${isActive ? 12 : 10}px;
-            height: ${isActive ? 12 : 10}px;
-            background: rgba(255,255,255,0.35);
-            border-radius: 9999px;
-            transform: translate(-50%, -50%) rotate(45deg);
-          "
-        ></div>
-      </div>
-    `,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size],
-    popupAnchor: [0, -size + 6],
-  });
-}
-
-function createUserIcon(L: typeof import("leaflet")) {
-  return L.divIcon({
-    className: "custom-marker-root",
-    html: `
-      <div
-        style="
-          width: 22px;
-          height: 22px;
-          border-radius: 9999px;
-          background: #22d3ee;
-          border: 4px solid #ffffff;
-          box-shadow:
-            0 0 0 8px rgba(34,211,238,0.20),
-            0 8px 18px rgba(0,0,0,0.22);
-        "
-      ></div>
-    `,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
-    popupAnchor: [0, -12],
-  });
-}
+import KaraokeMapPopup from "./map-preview/KaraokeMapPopup";
+import NearbyKaraokeCard from "./map-preview/NearbyKaraokeCard";
+import { createKaraokeIcon, createUserIcon } from "./map-preview/icons";
+import type {
+  Karaoke,
+  KaraokeWithDistance,
+  Order,
+  UserLocation,
+} from "./map-preview/types";
+import { getFitPoints, getNearbyKaraokes } from "./map-preview/utils";
 
 export default function MapPreview() {
   const router = useRouter();
   const [karaokes, setKaraokes] = useState<Karaoke[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -126,26 +43,34 @@ export default function MapPreview() {
   }, []);
 
   useEffect(() => {
-    const fetchKaraokes = async () => {
+    const fetchMapData = async () => {
       try {
-        const url = `${apiRootUrl}/karaoke`;
+        const [karaokeRes, orderRes] = await Promise.all([
+          fetch(`${apiRootUrl}/karaoke`),
+          fetch(`${apiBaseUrl}/orders`),
+        ]);
 
-        const res = await fetch(url);
-
-        if (!res.ok) {
-          throw new Error(`Failed to fetch karaoke data: ${res.status}`);
+        if (!karaokeRes.ok) {
+          throw new Error(`Failed to fetch karaoke data: ${karaokeRes.status}`);
         }
 
-        const data = (await res.json()) as { karaokes?: Karaoke[] };
-        setKaraokes(Array.isArray(data.karaokes) ? data.karaokes : []);
+        const karaokeData = (await karaokeRes.json()) as { karaokes?: Karaoke[] };
+        setKaraokes(Array.isArray(karaokeData.karaokes) ? karaokeData.karaokes : []);
+
+        if (orderRes.ok) {
+          const orderData = (await orderRes.json()) as Order[];
+          setOrders(Array.isArray(orderData) ? orderData : []);
+        } else {
+          setOrders([]);
+        }
       } catch (error) {
-        console.error("Failed to fetch karaokes:", error);
+        console.error("Failed to fetch map data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchKaraokes();
+    fetchMapData();
   }, []);
 
   useEffect(() => {
@@ -165,25 +90,7 @@ export default function MapPreview() {
   }, []);
 
   const nearbyKaraokes = useMemo<KaraokeWithDistance[]>(() => {
-    const valid = karaokes.filter(
-      (karaoke): karaoke is KaraokeWithDistance =>
-        typeof karaoke.latitude === "number" &&
-        typeof karaoke.longitude === "number"
-    );
-
-    if (!userLocation) return valid;
-
-    return valid
-      .map((karaoke) => ({
-        ...karaoke,
-        distance: getDistanceKm(
-          userLocation.latitude,
-          userLocation.longitude,
-          karaoke.latitude!,
-          karaoke.longitude!
-        ),
-      }))
-      .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+    return getNearbyKaraokes(karaokes, userLocation);
   }, [karaokes, userLocation]);
 
   useEffect(() => {
@@ -214,22 +121,7 @@ export default function MapPreview() {
   }, [nearbyKaraokes, selectedId, userLocation]);
 
   const fitPoints = useMemo<[number, number][]>(() => {
-    const points: [number, number][] = [];
-
-    if (userLocation) {
-      points.push([userLocation.latitude, userLocation.longitude]);
-    }
-
-    nearbyKaraokes.forEach((karaoke) => {
-      if (
-        typeof karaoke.latitude === "number" &&
-        typeof karaoke.longitude === "number"
-      ) {
-        points.push([karaoke.latitude, karaoke.longitude]);
-      }
-    });
-
-    return points;
+    return getFitPoints(nearbyKaraokes, userLocation);
   }, [nearbyKaraokes, userLocation]);
 
   const karaokeIcon = useMemo<DivIcon | undefined>(() => {
@@ -253,7 +145,7 @@ export default function MapPreview() {
 
   if (!leafletLib) {
     return (
-      <section className="container mx-auto px-4 py-12">
+      <section className="container mx-auto px-4 py-10 sm:px-6 sm:py-12">
         <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground shadow-sm">
           Loading map...
         </div>
@@ -263,21 +155,21 @@ export default function MapPreview() {
 
   return (
     <>
-      <section className="container mx-auto px-4 py-12">
+      <section className="container mx-auto px-4 py-10 sm:px-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl font-bold text-foreground md:text-4xl">
+          <h2 className="text-2xl font-bold text-foreground sm:text-3xl md:text-4xl">
             Nearby Karaoke <span className="text-primary">Venues</span>
           </h2>
-          <p className="mt-2 text-muted-foreground">
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
             Discover karaoke spots around you
           </p>
         </motion.div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[320px_1fr] lg:items-start">
+        <div className="mt-6 grid gap-4 sm:mt-8 sm:gap-6 lg:grid-cols-[320px_1fr] lg:items-start">
           <div className="order-2 space-y-3 lg:order-1 lg:max-h-[520px] lg:overflow-y-auto lg:pr-1">
             {loading ? (
               <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground shadow-sm">
@@ -289,57 +181,22 @@ export default function MapPreview() {
               </div>
             ) : (
               nearbyKaraokes.map((karaoke) => {
-                const isSelected = selectedId === karaoke._id;
-
                 return (
-                  <button
+                  <NearbyKaraokeCard
                     key={karaoke._id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedId(karaoke._id)
-                      openBookingFor(karaoke._id)
-                    }}
-                    className={[
-                      "w-full rounded-2xl border bg-card p-4 text-left shadow-sm transition-all duration-200",
-                      isSelected
-                        ? "border-primary ring-1 ring-primary/30"
-                        : "border-border hover:-translate-y-0.5 hover:shadow-md",
-                    ].join(" ")}
-                  >
-                    <div className="flex gap-3">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-card-foreground">
-                          {karaoke.name}
-                        </h3>
-
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {karaoke.address}, {karaoke.city}
-                        </p>
-
-                        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock3 className="h-4 w-4" />
-                          <span>
-                            {karaoke.openingTime} - {karaoke.closingTime}
-                          </span>
-                        </div>
-
-                        {typeof karaoke.distance === "number" && (
-                          <div className="mt-2 flex items-center gap-2 text-sm font-medium text-primary">
-                            <Navigation className="h-4 w-4" />
-                            <span>{karaoke.distance.toFixed(1)} km away</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </button>
+                    karaoke={karaoke}
+                    orders={orders}
+                    isSelected={selectedId === karaoke._id}
+                    onSelect={() => setSelectedId(karaoke._id)}
+                    onBookNow={() => openBookingFor(karaoke._id)}
+                  />
                 );
               })
             )}
           </div>
 
           <div className="order-1 rounded-3xl border border-border bg-card shadow-sm lg:order-2">
-            <div className="relative h-[420px] overflow-hidden rounded-3xl md:h-[500px] lg:h-[520px]">
+            <div className="relative h-[320px] overflow-hidden rounded-3xl sm:h-[380px] md:h-[500px] lg:h-[520px]">
               <Map
                 center={mapCenter}
                 zoom={13}
@@ -390,27 +247,11 @@ export default function MapPreview() {
                       }}
                     >
                       <Popup>
-                        <div className="space-y-2">
-                          <p className="font-semibold">{karaoke.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {karaoke.address}, {karaoke.city}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {karaoke.phone}
-                          </p>
-                          {typeof karaoke.distance === "number" && (
-                            <p className="text-sm font-medium text-primary">
-                              {karaoke.distance.toFixed(1)} km away
-                            </p>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => openBookingFor(karaoke._id)}
-                            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-                          >
-                            Open Booking
-                          </button>
-                        </div>
+                        <KaraokeMapPopup
+                          karaoke={karaoke}
+                          orders={orders}
+                          onBookNow={() => openBookingFor(karaoke._id)}
+                        />
                       </Popup>
                     </Marker>
                   );
@@ -420,7 +261,6 @@ export default function MapPreview() {
           </div>
         </div>
       </section>
-
     </>
   );
 }
