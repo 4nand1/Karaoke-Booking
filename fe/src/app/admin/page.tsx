@@ -56,7 +56,8 @@ export default function AdminDashboard() {
   const { user } = useUser()
   const router = useRouter()
 
-  const [karaoke, setKaraoke] = useState<Karaoke | null>(null)
+  const [karaokes, setKaraokes] = useState<Karaoke[]>([])
+  const [selectedKaraokeId, setSelectedKaraokeId] = useState("")
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>("rooms")
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -65,6 +66,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user) fetchKaraoke()
   }, [user])
+
+  const karaoke =
+    karaokes.find((item) => item._id === selectedKaraokeId) ?? karaokes[0] ?? null
 
   async function fetchKaraoke() {
     try {
@@ -75,7 +79,20 @@ export default function AdminDashboard() {
       )
       if (res.ok) {
         const data = await res.json()
-        setKaraoke(data.karaoke ?? null)
+        const nextKaraokes = Array.isArray(data.karaokes)
+          ? data.karaokes
+          : data.karaoke
+            ? [data.karaoke]
+            : []
+
+        setKaraokes(nextKaraokes)
+        setSelectedKaraokeId((prev) => {
+          if (prev && nextKaraokes.some((item: Karaoke) => item._id === prev)) {
+            return prev
+          }
+
+          return nextKaraokes[0]?._id ?? ""
+        })
       }
     } catch (e) {
       console.error("Fetch error:", e)
@@ -151,6 +168,10 @@ export default function AdminDashboard() {
         {sidebarOpen && (
           <div className="p-4 border-t border-white/5 space-y-2">
             <div className="flex items-center justify-between text-[10px]">
+              <span className="text-white/30 uppercase tracking-widest">Караоке</span>
+              <span className="text-white/60 font-black">{karaokes.length}</span>
+            </div>
+            <div className="flex items-center justify-between text-[10px]">
               <span className="text-white/30 uppercase tracking-widest">Өрөө</span>
               <span className="text-white/60 font-black">{karaoke.rooms.length}</span>
             </div>
@@ -180,11 +201,57 @@ export default function AdminDashboard() {
                 <MapPin size={16} className="text-purple-500" /> {karaoke.address}, {karaoke.city}
               </div>
             </div>
-            <div className="flex items-center gap-3 bg-green-500/5 border border-green-500/20 px-5 py-2 rounded-2xl">
-              <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]" />
-              <span className="text-xs font-bold text-green-500 uppercase tracking-widest">Active</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => router.push("/register-karaoke")}
+                className="rounded-2xl border border-purple-500/30 bg-purple-500/10 px-5 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300 transition-all hover:bg-purple-500/20"
+              >
+                Add another karaoke
+              </button>
+              <div className="flex items-center gap-3 bg-green-500/5 border border-green-500/20 px-5 py-2 rounded-2xl">
+                <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]" />
+                <span className="text-xs font-bold text-green-500 uppercase tracking-widest">Active</span>
+              </div>
             </div>
           </div>
+
+          {karaokes.length > 1 && (
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-4 md:p-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-white/40">
+                    Your Karaoke Venues
+                  </p>
+                  <p className="mt-1 text-sm text-white/50">
+                    Clerk account нэгээрээ олон karaoke удирдаж болно.
+                  </p>
+                </div>
+                <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/50">
+                  {karaokes.length} total
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {karaokes.map((item) => (
+                  <button
+                    key={item._id}
+                    onClick={() => setSelectedKaraokeId(item._id)}
+                    className={`rounded-2xl border p-4 text-left transition-all ${
+                      item._id === karaoke._id
+                        ? "border-purple-500/40 bg-purple-500/10"
+                        : "border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <p className="text-sm font-black text-white">{item.name}</p>
+                    <p className="mt-1 text-xs text-white/40">{item.address}, {item.city}</p>
+                    <p className="mt-2 text-[10px] uppercase tracking-widest text-white/30">
+                      {item.rooms.length} rooms · {item.menu.length} menu items
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[

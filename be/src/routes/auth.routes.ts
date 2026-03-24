@@ -45,9 +45,10 @@ const loadCurrentUserState = async (userId: string) => {
     })
   }
 
-  const karaoke = await KaraokeModel.findOne({ ownerClerkUserId: userId }).sort({
+  const karaokes = await KaraokeModel.find({ ownerClerkUserId: userId }).sort({
     createdAt: -1,
   })
+  const karaoke = karaokes[0] ?? null
 
   const rawRole = String((profile as any).role)
   const updates: Record<string, unknown> = {}
@@ -88,7 +89,7 @@ const loadCurrentUserState = async (userId: string) => {
     (profile as any).ownerStatus ?? null
   )
 
-  return { profile, karaoke }
+  return { profile, karaoke, karaokes }
 }
 
 router.get("/health", (_req, res) => {
@@ -103,12 +104,13 @@ router.get("/me", async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" })
     }
 
-    const { profile, karaoke } = await loadCurrentUserState(userId)
+    const { profile, karaoke, karaokes } = await loadCurrentUserState(userId)
 
     return res.json({
       userId,
       profile,
       karaoke,
+      karaokes,
     })
   } catch (error) {
     console.error("GET /me failed:", error)
@@ -124,11 +126,12 @@ router.get("/me/profile", async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" })
     }
 
-    const { profile, karaoke } = await loadCurrentUserState(userId)
+    const { profile, karaoke, karaokes } = await loadCurrentUserState(userId)
 
     return res.json({
       profile,
       karaoke,
+      karaokes,
     })
   } catch (error) {
     console.error("GET /me/profile failed:", error)

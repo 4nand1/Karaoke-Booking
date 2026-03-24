@@ -29,6 +29,26 @@ type AdminProfileResponse = {
     rulesPolicies?: string
     approvalStatus?: "pending" | "approved"
   }
+  karaokes?: Array<{
+    _id?: string
+    ownerClerkUserId?: string
+    name?: string
+    address?: string
+    city?: string
+    phone?: string
+    email?: string
+    ownerFullName?: string
+    openingHours?: string
+    openingTime?: string
+    closingTime?: string
+    description?: string
+    roomTypes?: string[]
+    pricePerHour?: number
+    capacity?: number
+    amenities?: string[]
+    rulesPolicies?: string
+    approvalStatus?: "pending" | "approved"
+  }>
 }
 
 type Booking = {
@@ -108,6 +128,7 @@ export default async function AdminDashboardPage() {
   }
 
   const karaoke = data.karaoke
+  const karaokes = data.karaokes ?? (karaoke ? [karaoke] : [])
   const bookings = await getOwnerBookings(karaoke?.ownerClerkUserId)
 
   return (
@@ -137,6 +158,10 @@ export default async function AdminDashboardPage() {
               <p>
                 <span className="font-medium">Owner status:</span>{" "}
                 {data.profile.ownerStatus || "-"}
+              </p>
+              <p>
+                <span className="font-medium">Total karaokes:</span>{" "}
+                {karaokes.length}
               </p>
             </div>
           </div>

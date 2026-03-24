@@ -15,15 +15,18 @@ export const getKaraokeByOwner: RequestHandler = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" })
     }
 
-    const karaoke = await KaraokeModel.findOne({ ownerClerkUserId }).sort({
+    const karaokes = await KaraokeModel.find({ ownerClerkUserId }).sort({
       createdAt: -1,
     })
 
-    if (!karaoke) {
+    if (!karaokes.length) {
       return res.status(404).json({ message: "Karaoke not found" })
     }
 
-    return res.status(200).json({ karaoke })
+    return res.status(200).json({
+      karaoke: karaokes[0],
+      karaokes,
+    })
   } catch (error) {
     console.error("getKaraokeByOwner error:", error)
     return res.status(500).json({ message: "Failed to fetch karaoke" })

@@ -25,7 +25,7 @@ const HeroCarousel = () => {
   );
 
   return (
-    <section className="relative h-[90vh] min-h-[600px] overflow-hidden">
+    <section className="relative h-[72vh] min-h-[460px] overflow-hidden sm:h-[78vh] sm:min-h-[520px]">
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
@@ -46,24 +46,24 @@ const HeroCarousel = () => {
       </AnimatePresence>
 
       {/* Search bar */}
-      <div className="absolute inset-0 flex items-center justify-center px-6">
+      <div className="absolute inset-0 flex items-center justify-center px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="w-full max-w-2xl"
+          className="w-full max-w-xl sm:max-w-2xl"
         >
-          <div className="glass flex items-center gap-3 rounded-2xl p-2 shadow-2xl">
-            <div className="flex flex-1 items-center gap-3 px-4">
-              <Search className="h-5 w-5 text-muted-foreground" />
+          <div className="glass flex items-center gap-2 rounded-2xl p-2 shadow-2xl">
+            <div className="flex flex-1 items-center gap-3 px-3 sm:px-4">
+              <Search className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
               <input
                 type="text"
                 placeholder="Search karaoke rooms, venues..."
-                className="w-full bg-transparent py-3 text-foreground placeholder:text-muted-foreground focus:outline-none"
+                className="w-full bg-transparent py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none sm:py-3 sm:text-base"
               />
             </div>
 
-            <Button variant="neon" className="rounded-xl px-8 py-6">
+            <Button variant="neon" className="rounded-xl px-5 py-4 sm:px-8 sm:py-6">
               Search
             </Button>
           </div>
@@ -73,20 +73,20 @@ const HeroCarousel = () => {
       {/* arrows */}
       <button
         onClick={prev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 glass rounded-full p-3 text-foreground transition-all hover:neon-glow"
+        className="absolute left-3 top-1/2 -translate-y-1/2 glass rounded-full p-2.5 text-foreground transition-all hover:neon-glow sm:left-4 sm:p-3"
       >
         <ChevronLeft className="h-5 w-5" />
       </button>
 
       <button
         onClick={next}
-        className="absolute right-4 top-1/2 -translate-y-1/2 glass rounded-full p-3 text-foreground transition-all hover:neon-glow"
+        className="absolute right-3 top-1/2 -translate-y-1/2 glass rounded-full p-2.5 text-foreground transition-all hover:neon-glow sm:right-4 sm:p-3"
       >
         <ChevronRight className="h-5 w-5" />
       </button>
 
       {/* dots */}
-      <div className="absolute bottom-8 left-1/2 flex -translate-x-1/2 gap-2">
+      <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2 sm:bottom-8">
         {slides.map((_, i) => (
           <button
             key={i}
