@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import { Star } from "lucide-react"
 import Iridescence from "@/components/Iridescence"
 import { apiBaseUrl } from "@/lib/api-url"
+import { ImageUploadField } from "@/components/ui/image-upload-field"
 
 type KaraokeForm = {
   karaokeName: string
@@ -20,7 +21,7 @@ type KaraokeForm = {
   openingTime: string
   closingTime: string
   amenities: string
-  images: string
+  images: string[]
   rulesPolicies: string
   latitude: string
   longitude: string
@@ -43,7 +44,7 @@ export default function RegisterKaraokePage() {
     openingTime: "",
     closingTime: "",
     amenities: "",
-    images: "",
+    images: [],
     rulesPolicies: "",
     latitude: "",
     longitude: "",
@@ -100,10 +101,7 @@ export default function RegisterKaraokePage() {
           .split(",")
           .map((item) => item.trim())
           .filter(Boolean),
-        images: form.images
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
+        images: form.images,
         rulesPolicies: form.rulesPolicies,
         latitude: form.latitude ? Number(form.latitude) : null,
         longitude: form.longitude ? Number(form.longitude) : null,
@@ -316,13 +314,15 @@ export default function RegisterKaraokePage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className={labelStyle}>Images</label>
-                <input
-                  name="images"
+                <ImageUploadField
+                  label="Images"
                   value={form.images}
-                  onChange={handleChange}
-                  placeholder="https://..., https://..."
-                  className={inputStyle}
+                  onChange={(images) =>
+                    setForm((prev) => ({ ...prev, images }))
+                  }
+                  multiple
+                  theme="dark"
+                  helperText="Choose karaoke photos from your device instead of pasting URLs."
                 />
               </div>
 

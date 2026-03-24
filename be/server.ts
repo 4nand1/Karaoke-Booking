@@ -43,7 +43,7 @@ app.use(
 )
 
 app.use("/api/payments", paymentRouter)
-app.use(express.json())
+app.use(express.json({ limit: "20mb" }))
 
 app.use(
   clerkMiddleware({

@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import { Plus, Star, Trash2 } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
 import Iridescence from "@/components/Iridescence"
+import { ImageUploadField } from "@/components/ui/image-upload-field"
 
 type RoomType = "VIP" | "Medium" | "Small"
 
@@ -111,14 +112,13 @@ function RoomCard({
         </div>
 
         <div>
-          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">
-            Image URL
-          </label>
-          <input
-            value={room.image}
-            onChange={e => onUpdate(room.id, "image", e.target.value)}
-            placeholder="https://..."
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-white/25 focus:border-purple-500"
+          <ImageUploadField
+            label="Image *"
+            value={room.image ? [room.image] : []}
+            onChange={(images) => onUpdate(room.id, "image", images[0] ?? "")}
+            theme="dark"
+            required
+            helperText="Choose a room image from your device."
           />
         </div>
       </div>
