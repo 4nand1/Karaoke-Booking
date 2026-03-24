@@ -15,8 +15,10 @@ import reviewRouter from "./src/routes/review.routes"
 import { KaraokeRouter } from "./src/routes/karaokeRoutes"
 import bookingRoutes from "./src/routes/booking.routes"
 import { OrderRouter } from "./src/routes/order.router"
+import paymentRouter from "./src/routes/payment.routes"
 
 const app = express()
+const clientUrl = process.env.CLIENT_URL?.trim() || "http://localhost:3000"
 
 const publishableKey =
   process.env.CLERK_PUBLISHABLE_KEY ||
@@ -35,11 +37,12 @@ if (!publishableKey) {
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: clientUrl,
     credentials: true,
   })
 )
 
+app.use("/api/payments", paymentRouter)
 app.use(express.json())
 
 app.use(
@@ -74,12 +77,28 @@ app.use(
 )
 
 const PORT = process.env.PORT || 9000
+const DB_RETRY_DELAY_MS = 5000
 
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`)
-    console.log(
-      `Clerk loaded: pk=${publishableKey ? "yes" : "no"}, sk=${secretKey ? "yes" : "no"}`
-    )
-  })
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
+  console.log(
+    `Clerk loaded: pk=${publishableKey ? "yes" : "no"}, sk=${secretKey ? "yes" : "no"}`
+  )
 })
+
+async function connectDatabaseWithRetry() {
+  while (true) {
+    try {
+      await connectDB()
+      return
+    } catch (error) {
+      console.error(
+        `MongoDB connection failed. Retrying in ${DB_RETRY_DELAY_MS / 1000} seconds...`,
+        error
+      )
+      await new Promise((resolve) => setTimeout(resolve, DB_RETRY_DELAY_MS))
+    }
+  }
+}
+
+void connectDatabaseWithRetry()

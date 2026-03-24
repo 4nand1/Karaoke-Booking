@@ -2,7 +2,7 @@
 
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   Clock3,
@@ -80,13 +80,12 @@ const formatMinutesToTime = (minutes: number) => {
 
 export default function BookingPage() {
   const params = useParams<{ karaokeId: string }>();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const karaokeId = params.karaokeId;
 
   const [karaoke, setKaraoke] = useState<Karaoke | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [selectedMenuItems, setSelectedMenuItems] = useState<SelectedMenuItem[]>([]);
@@ -187,6 +186,22 @@ export default function BookingPage() {
   const roomTotal = selectedRoom ? selectedRoom.price * selectedSlots.length : 0;
   const estimatedTotal = roomTotal + menuTotal;
 
+  const getValidationMessage = () => {
+    if (!karaoke || karaoke._id === "sample") {
+      return "This sample card is not linked to a live karaoke yet.";
+    }
+
+    if (!selectedRoom) {
+      return "Please select a room.";
+    }
+
+    if (!formData.customerName.trim() || !formData.customerPhone.trim() || !selectedDate || !selectedSlots.length) {
+      return "Please fill in all booking details.";
+    }
+
+    return null;
+  };
+
   const toggleSlot = (slot: string) => {
     setSelectedSlots((prev) =>
       prev.includes(slot) ? prev.filter((item) => item !== slot) : [...prev, slot]
@@ -209,47 +224,43 @@ export default function BookingPage() {
   const getQuantity = (itemId?: string) =>
     selectedMenuItems.find(m => m.item._id === itemId)?.quantity ?? 0;
 
-  const handleSubmit = async () => {
-    if (!karaoke || !selectedRoom || karaoke._id === "sample") {
-      setFeedback({ type: "error", message: "Room information is missing." });
+  const handleStripeCheckout = async () => {
+    const validationMessage = getValidationMessage();
+
+    if (validationMessage) {
+      setFeedback({ type: "error", message: validationMessage });
       return;
     }
-    if (!formData.customerName.trim() || !formData.customerPhone.trim() || !selectedDate || !selectedSlots.length) {
-      setFeedback({ type: "error", message: "Please fill in all booking details." });
+
+    if (!karaoke || !selectedRoom) {
       return;
     }
 
     try {
-      setSubmitting(true);
+      setPaymentLoading(true);
       setFeedback(null);
 
-      const response = await api.post("/orders", {
-        karaokeId: karaoke._id,
-        roomId: selectedRoom._id,
-        customerName: formData.customerName.trim(),
-        customerPhone: formData.customerPhone.trim(),
-        bookingDate: selectedDate,
-        bookingSlots: selectedSlots,
-        guestCount: Number(formData.guestCount) || 1,
-        menuItems: selectedMenuItems.map(({ item, quantity }) => ({
-          itemId: item._id,
-          name: item.name,
-          price: item.price,
-          quantity,
-        })),
-        totalAmount: estimatedTotal,
+      const response = await api.post("/payments/create-checkout-session", {
+        roomName: `${karaoke.name} - ${selectedRoom.name}`,
+        amount: estimatedTotal > 0 ? estimatedTotal : selectedRoom.price,
       });
 
-      if (!response.data?.success) throw new Error("Failed to create booking");
-      router.push("/my-bookings");
+      const checkoutUrl = response.data?.url;
+
+      if (!checkoutUrl || typeof checkoutUrl !== "string") {
+        throw new Error("Stripe checkout URL was not returned");
+      }
+
+      window.location.assign(checkoutUrl);
     } catch (error) {
-      console.error("Booking failed:", error);
+      console.error("Stripe checkout failed:", error);
       const message = axios.isAxiosError(error)
-        ? error.response?.data?.message || "Failed to create booking"
-        : "Failed to create booking";
+        ? error.response?.data?.message || "Failed to start Stripe Checkout"
+        : "Failed to start Stripe Checkout";
+
       setFeedback({ type: "error", message });
     } finally {
-      setSubmitting(false);
+      setPaymentLoading(false);
     }
   };
 
@@ -545,16 +556,14 @@ export default function BookingPage() {
           <Button
             variant="neon"
             className="mt-6 w-full rounded-xl"
-            disabled={!selectedRoom || submitting}
-            onClick={() => {
-              if (karaoke._id === "sample") {
-                setFeedback({ type: "info", message: "This sample card is not linked to a live karaoke yet." });
-                return;
-              }
-              handleSubmit();
-            }}
+            disabled={!selectedRoom || paymentLoading}
+            onClick={handleStripeCheckout}
           >
-            {karaoke._id === "sample" ? "Link to live karaoke required" : submitting ? "Booking..." : "Confirm Booking"}
+            {paymentLoading
+              ? "Redirecting to Stripe..."
+              : karaoke._id === "sample"
+                ? "Link to live karaoke required"
+                : "Confirm Booking"}
           </Button>
         </section>
       </div>
