@@ -1,76 +1,98 @@
 "use client"
 
-import { useEffect } from "react"
-import { useAuth } from "@clerk/nextjs"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
+import { SignUp } from "@clerk/nextjs"
+import { useSearchParams } from "next/navigation"
+import { clerkEnabled } from "@/lib/clerk-config"
 
-type ProfileResponse = {
-  profile?: {
-    role?: "customer" | "karaoke_owner"
-    ownerStatus?: "pending" | "approved" | null
-  } | null
-}
+type UiRole = "user" | "admin"
 
-export default function PostAuthPage() {
-  const router = useRouter()
+const STORAGE_KEY = "karaoke_app_selected_role"
+
+export default function SignUpPage() {
   const searchParams = useSearchParams()
-  const { getToken, isLoaded } = useAuth()
+  const queryRole = searchParams.get("role")
+
+  const [selectedRole, setSelectedRole] = useState<UiRole>(
+    queryRole === "admin" ? "admin" : "user"
+  )
 
   useEffect(() => {
-    const run = async () => {
-      if (!isLoaded) return
+    const savedRole =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(STORAGE_KEY)
+        : null
 
-      const redirectUrlFromQuery =
-        searchParams.get("redirect_url") ?? searchParams.get("redirectUrl")
-
-      const safeRedirectUrl =
-        redirectUrlFromQuery && redirectUrlFromQuery.startsWith("/")
-          ? redirectUrlFromQuery
-          : null
-
-      const token = await getToken()
-
-      if (!token) {
-        router.replace("/sign-in")
-        return
-      }
-
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: "no-store",
-        })
-
-        if (!res.ok) {
-          router.replace("/")
-          return
-        }
-
-        const data: ProfileResponse = await res.json()
-
-        if (safeRedirectUrl) {
-          router.replace(safeRedirectUrl)
-          return
-        }
-
-        if (
-          data.profile?.role === "karaoke_owner" &&
-          data.profile?.ownerStatus === "approved"
-        ) {
-          router.replace("/admin/dashboard")
-          return
-        }
-
-        router.replace("/")
-      } catch {
-        router.replace("/")
-      }
+    if (queryRole === "admin" || queryRole === "user") {
+      setSelectedRole(queryRole)
+      window.localStorage.setItem(STORAGE_KEY, queryRole)
+      return
     }
 
-    run()
-  }, [getToken, isLoaded, router, searchParams])
+    if (savedRole === "admin" || savedRole === "user") {
+      setSelectedRole(savedRole)
+    }
+  }, [queryRole])
 
-  return <div className="p-6">Loading...</div>
+  if (!clerkEnabled) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-6 text-center">
+        Authentication is not configured for this environment yet.
+      </div>
+    )
+  }
+
+  const handleRoleChange = (role: UiRole) => {
+    setSelectedRole(role)
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(STORAGE_KEY, role)
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-6">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <p className="mb-3 text-center text-sm font-medium text-gray-700">
+          Choose account type
+        </p>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => handleRoleChange("user")}
+            className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+              selectedRole === "user"
+                ? "bg-black text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            User
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleRoleChange("admin")}
+            className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+              selectedRole === "admin"
+                ? "bg-black text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            Admin
+          </button>
+        </div>
+
+        <p className="mt-3 text-center text-xs text-gray-500">
+          Only Admin accounts can register karaokes.
+        </p>
+      </div>
+
+      <SignUp
+        path="/sign-up"
+        routing="path"
+        signInUrl="/sign-in"
+        fallbackRedirectUrl="/post-auth"
+      />
+    </div>
+  )
 }

@@ -5,6 +5,19 @@ import { KaraokeModel } from "../models/Karaoke"
 
 const router = Router()
 
+type AppRole = "customer" | "karaoke_owner"
+type OwnerStatus = "pending" | "approved" | null
+
+const normalizeRole = (value: unknown): AppRole => {
+  const role = String(value || "").trim().toLowerCase()
+
+  if (role === "admin" || role === "karaoke_owner") {
+    return "karaoke_owner"
+  }
+
+  return "customer"
+}
+
 const getPrimaryEmail = (clerkUser: any) =>
   clerkUser.emailAddresses.find(
     (item: any) => item.id === clerkUser.primaryEmailAddressId
@@ -18,8 +31,8 @@ const getFullName = (clerkUser: any) => {
 
 const syncClerkMetadata = async (
   userId: string,
-  role: "customer" | "karaoke_owner",
-  ownerStatus: "pending" | "approved" | null
+  role: AppRole,
+  ownerStatus: OwnerStatus
 ) => {
   await clerkClient.users.updateUserMetadata(userId, {
     publicMetadata: {
@@ -62,7 +75,7 @@ const loadCurrentUserState = async (userId: string) => {
   }
 
   if (karaoke) {
-    updates.karaokeId = String(karaoke._id)
+    updates.karaokeId = String((karaoke as any)._id)
 
     if ((updates.role ?? rawRole) === "customer") {
       updates.role = "karaoke_owner"
@@ -84,8 +97,8 @@ const loadCurrentUserState = async (userId: string) => {
 
   await syncClerkMetadata(
     userId,
-    (profile as any).role,
-    (profile as any).ownerStatus ?? null
+    normalizeRole((profile as any).role),
+    ((profile as any).ownerStatus ?? null) as OwnerStatus
   )
 
   return { profile, karaoke }
@@ -109,6 +122,7 @@ router.get("/me", async (req, res) => {
       userId,
       profile,
       karaoke,
+      canRegisterKaraoke: (profile as any)?.role === "karaoke_owner",
     })
   } catch (error) {
     console.error("GET /me failed:", error)
@@ -129,9 +143,61 @@ router.get("/me/profile", async (req, res) => {
     return res.json({
       profile,
       karaoke,
+      canRegisterKaraoke: (profile as any)?.role === "karaoke_owner",
     })
   } catch (error) {
     console.error("GET /me/profile failed:", error)
+    return res.status(500).json({ message: "Server error" })
+  }
+})
+
+router.post("/me/role", async (req, res) => {
+  try {
+    const { isAuthenticated, userId } = getAuth(req)
+
+    if (!isAuthenticated || !userId) {
+      return res.status(401).json({ message: "Unauthorized" })
+    }
+
+    const clerkUser = await clerkClient.users.getUser(userId)
+    const requestedRole = normalizeRole(req.body?.role)
+
+    let profile = await UserProfile.findOne({ clerkUserId: userId })
+
+    if (!profile) {
+      const ownerStatus: OwnerStatus =
+        requestedRole === "karaoke_owner" ? "approved" : null
+
+      profile = await UserProfile.create({
+        clerkUserId: userId,
+        email: getPrimaryEmail(clerkUser),
+        fullName: getFullName(clerkUser),
+        role: requestedRole,
+        ownerStatus,
+        karaokeId: null,
+      })
+
+      await syncClerkMetadata(userId, requestedRole, ownerStatus)
+
+      return res.json({
+        message: "Role created successfully",
+        profile,
+        canRegisterKaraoke: requestedRole === "karaoke_owner",
+      })
+    }
+
+    const currentRole = normalizeRole((profile as any).role)
+    const currentOwnerStatus = ((profile as any).ownerStatus ?? null) as OwnerStatus
+
+    await syncClerkMetadata(userId, currentRole, currentOwnerStatus)
+
+    return res.json({
+      message: "Role already exists",
+      profile,
+      canRegisterKaraoke: currentRole === "karaoke_owner",
+    })
+  } catch (error) {
+    console.error("POST /me/role failed:", error)
     return res.status(500).json({ message: "Server error" })
   }
 })

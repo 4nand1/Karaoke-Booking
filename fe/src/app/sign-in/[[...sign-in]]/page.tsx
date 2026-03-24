@@ -1,7 +1,39 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { SignIn } from "@clerk/nextjs"
+import { useSearchParams } from "next/navigation"
 import { clerkEnabled } from "@/lib/clerk-config"
 
-export default function Page() {
+type UiRole = "user" | "admin"
+
+const STORAGE_KEY = "karaoke_app_selected_role"
+
+export default function SignInPage() {
+  const searchParams = useSearchParams()
+  const queryRole = searchParams.get("role")
+
+  const [selectedRole, setSelectedRole] = useState<UiRole>(
+    queryRole === "admin" ? "admin" : "user"
+  )
+
+  useEffect(() => {
+    const savedRole =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(STORAGE_KEY)
+        : null
+
+    if (queryRole === "admin" || queryRole === "user") {
+      setSelectedRole(queryRole)
+      window.localStorage.setItem(STORAGE_KEY, queryRole)
+      return
+    }
+
+    if (savedRole === "admin" || savedRole === "user") {
+      setSelectedRole(savedRole)
+    }
+  }, [queryRole])
+
   if (!clerkEnabled) {
     return (
       <div className="flex min-h-screen items-center justify-center p-6 text-center">
@@ -10,8 +42,51 @@ export default function Page() {
     )
   }
 
+  const handleRoleChange = (role: UiRole) => {
+    setSelectedRole(role)
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(STORAGE_KEY, role)
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-6">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <p className="mb-3 text-center text-sm font-medium text-gray-700">
+          Sign in as
+        </p>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => handleRoleChange("user")}
+            className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+              selectedRole === "user"
+                ? "bg-black text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            User
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleRoleChange("admin")}
+            className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+              selectedRole === "admin"
+                ? "bg-black text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            Admin
+          </button>
+        </div>
+
+        <p className="mt-3 text-center text-xs text-gray-500">
+          Only Admin accounts can access karaoke registration.
+        </p>
+      </div>
+
       <SignIn
         path="/sign-in"
         routing="path"

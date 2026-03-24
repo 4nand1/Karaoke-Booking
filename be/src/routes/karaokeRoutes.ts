@@ -9,16 +9,18 @@ import {
 import { getKaraokeByOwner } from "../controllers/karaoke/getKaraokeByOwner"
 import { RoomRouter } from "./roomRoutes"
 import { MenuRouter } from "./menuRouter"
+import { requireAuth, requireKaraokeAdmin } from "../middlewares/authMidlleware"
 
 const KaraokeRouter = Router()
 
 KaraokeRouter.get("/", getKaraoke)
-KaraokeRouter.get("/mine", getKaraokeByOwner)
+KaraokeRouter.get("/mine", requireAuth, getKaraokeByOwner)
 KaraokeRouter.use("/:id/rooms", RoomRouter)
 KaraokeRouter.use("/:id/menu", MenuRouter)
 KaraokeRouter.get("/:id", getKaraokeById)
-KaraokeRouter.post("/", createKaraoke)
-KaraokeRouter.put("/:id", updateKaraoke)
-KaraokeRouter.delete("/:id", deleteKaraoke)
+
+KaraokeRouter.post("/", requireKaraokeAdmin, createKaraoke)
+KaraokeRouter.put("/:id", requireKaraokeAdmin, updateKaraoke)
+KaraokeRouter.delete("/:id", requireKaraokeAdmin, deleteKaraoke)
 
 export { KaraokeRouter }
