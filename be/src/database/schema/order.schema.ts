@@ -15,6 +15,12 @@ const orderSchema = new Schema(
     guestCount: { type: Number, default: 1 },
     totalAmount: { type: Number, default: 0 },
     status: { type: String, enum: ["pending", "confirmed", "cancelled"], default: "pending" },
+    menuItems: [{
+  itemId: { type: String, default: null },
+  name: { type: String, default: null },
+  price: { type: Number, default: 0 },
+  quantity: { type: Number, default: 1 },
+}],
   },
   { timestamps: true }
 )

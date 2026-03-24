@@ -1,9 +1,9 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import Navbar from "@/_components/client/navbar"
-import MapPreview from "@/_components/client/MapPreview"
 import Footer from "@/_components/client/Footer"
 import { Button } from "@/components/ui/button"
+import MapClient from "./MapClient"
 
 export default function MapPage() {
   return (
@@ -18,7 +18,7 @@ export default function MapPage() {
             </Link>
           </Button>
         </div>
-        <MapPreview />
+        <MapClient />
       </main>
       <Footer />
     </div>

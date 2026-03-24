@@ -17,6 +17,13 @@ type Order = {
   guestCount?: number
   totalAmount?: number
   status?: "pending" | "confirmed" | "cancelled"
+  createdAt?: string
+  menuItems?: {
+    itemId?: string
+    name?: string
+    price?: number
+    quantity?: number
+  }[]
 }
 
 type Room = {
@@ -283,6 +290,27 @@ export function OrdersTab({
                         <DetailItem label="Огноо" value={order.bookingDate} />
                         <DetailItem label="Нийт үнэ" value={`₮${order.totalAmount?.toLocaleString()}`} highlight />
                       </div>
+                      {order.menuItems && order.menuItems.length > 0 && (
+  <div className="rounded-2xl bg-white/[0.02] border border-white/5 p-4 space-y-2">
+    <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2">Захиалсан меню</p>
+    {order.menuItems.map((item, i) => (
+      <div key={i} className="flex items-center justify-between">
+        <span className="text-xs text-white/70">
+          {item.name} <span className="text-white/30">x{item.quantity}</span>
+        </span>
+        <span className="text-xs font-black text-purple-400">
+          ₮{((item.price ?? 0) * (item.quantity ?? 1)).toLocaleString()}
+        </span>
+      </div>
+    ))}
+    <div className="border-t border-white/5 pt-2 flex justify-between">
+      <span className="text-[10px] text-white/30 uppercase tracking-widest">Меню нийт</span>
+      <span className="text-xs font-black text-purple-400">
+        ₮{order.menuItems.reduce((s, m) => s + (m.price ?? 0) * (m.quantity ?? 1), 0).toLocaleString()}
+      </span>
+    </div>
+  </div>
+)}
                       <div className="flex gap-3">
                         {order.status === "pending" && (
                           <>
