@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Phone, Clock, LayoutGrid, UtensilsCrossed, Star, MapPin, ShoppingBag, ChevronRight } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
+import { Button } from "@/components/ui/button"
 import { RoomsTab } from "@/_components/admin/RoomsTab"
 import { MenuTab } from "@/_components/admin/MenuTab"
 import { OrdersTab } from "@/_components/admin/OrdersTab"
@@ -113,12 +114,13 @@ export default function AdminDashboard() {
         <Star size={40} fill="currentColor" />
       </div>
       <p className="text-white/60 font-light">Та одоогоор караоке бүртгүүлээгүй байна.</p>
-      <button
+      <Button
         onClick={() => router.push("/register-karaoke")}
-        className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 px-10 py-4 text-sm font-black uppercase tracking-widest shadow-xl shadow-purple-500/20 active:scale-95 transition-all"
+        variant="neon"
+        className="h-auto rounded-2xl px-10 py-4 text-sm font-black uppercase tracking-widest"
       >
         Караоке бүртгэх
-      </button>
+      </Button>
     </div>
   )
 

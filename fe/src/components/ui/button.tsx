@@ -22,7 +22,7 @@ const buttonVariants = cva(
  glass:
 "bg-white/10 backdrop-blur-xl border border-white/20 text-white hover:bg-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all",
           neon:
-"bg-primary text-primary-foreground shadow-[0_0_10px_theme(colors.primary)] hover:shadow-[0_0_25px_theme(colors.primary)] transition-all duration-300",
+"bg-primary text-primary-foreground shadow-[0_0_12px_theme(colors.primary),0_0_28px_rgba(255,47,146,0.18)] hover:-translate-y-0.5 hover:shadow-[0_0_18px_theme(colors.primary),0_0_34px_rgba(255,47,146,0.28)] active:translate-y-0 transition-all duration-300",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

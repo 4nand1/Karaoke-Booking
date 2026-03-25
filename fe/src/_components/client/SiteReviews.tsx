@@ -6,6 +6,7 @@ import { Star, Send, Trash2, LogIn } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/axios";
+import { Button } from "@/components/ui/button";
 
 interface SiteReview {
   _id?: string;
@@ -298,14 +299,15 @@ const SiteReviews = () => {
             />
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="neon"
             disabled={submitting}
-            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-auto rounded-xl px-6 py-3 font-semibold"
           >
             <Send className="h-5 w-5" />
             {submitting ? "Submitting..." : "Submit Review"}
-          </button>
+          </Button>
         </form>
       </motion.div>
 

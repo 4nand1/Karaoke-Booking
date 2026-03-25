@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import { Plus, Star, Trash2 } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
 import Iridescence from "@/components/Iridescence"
+import { Button } from "@/components/ui/button"
 import { ImageUploadField } from "@/components/ui/image-upload-field"
 
 type RoomType = "VIP" | "Medium" | "Small"
@@ -258,13 +259,14 @@ export default function RoomsSetupPage() {
               </p>
             )}
 
-            <button
+            <Button
               onClick={handleSubmit}
+              variant="neon"
               disabled={loading}
-              className="w-full rounded-[1.5rem] bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4 text-sm font-black uppercase tracking-widest text-white shadow-xl shadow-purple-900/30 transition-all disabled:opacity-50"
+              className="h-auto w-full rounded-[1.5rem] px-6 py-4 text-sm font-black uppercase tracking-widest"
             >
               {loading ? "Saving..." : "Save rooms & finish"}
-            </button>
+            </Button>
           </div>
         </motion.div>
       </div>

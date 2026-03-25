@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import { Star } from "lucide-react"
 import Iridescence from "@/components/Iridescence"
 import { apiBaseUrl } from "@/lib/api-url"
+import { Button } from "@/components/ui/button"
 import { ImageUploadField } from "@/components/ui/image-upload-field"
 
 type KaraokeForm = {
@@ -370,13 +371,14 @@ export default function RegisterKaraokePage() {
               </p>
             ) : null}
 
-            <button
+            <Button
               type="submit"
+              variant="neon"
               disabled={loading}
-              className="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 py-4 font-black uppercase tracking-widest text-white shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+              className="h-auto w-full rounded-2xl py-4 font-black uppercase tracking-widest"
             >
               {loading ? "Бүртгэж байна..." : "Дараах → Өрөө бүртгэх"}
-            </button>
+            </Button>
           </form>
         </motion.div>
       </div>

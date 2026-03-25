@@ -1,6 +1,7 @@
 "use client";
 
 import { Clock3, MapPin, Navigation } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Order, KaraokeWithDistance } from "./types";
 import {
   getBookingStatus,
@@ -116,13 +117,15 @@ export default function NearbyKaraokeCard({
         </div>
       </button>
 
-      <button
+      <Button
         type="button"
+        variant="neon"
+        size="sm"
         onClick={onBookNow}
-        className="mt-3 inline-flex w-full cursor-pointer items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:w-auto"
+        className="mt-3 w-full rounded-xl sm:w-auto"
       >
         Book now
-      </button>
+      </Button>
     </div>
   );
 }

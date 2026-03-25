@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import type { Order, KaraokeWithDistance } from "./types";
 import {
   getBookingStatus,
@@ -85,13 +86,15 @@ export default function KaraokeMapPopup({
           {karaoke.distance.toFixed(1)} km away
         </p>
       )}
-      <button
+      <Button
         type="button"
+        variant="neon"
+        size="sm"
         onClick={onBookNow}
-        className="w-full cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+        className="w-full rounded-xl"
       >
         Book now
-      </button>
+      </Button>
     </div>
   );
 }
