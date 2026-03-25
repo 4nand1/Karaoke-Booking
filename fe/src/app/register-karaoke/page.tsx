@@ -415,7 +415,9 @@ export default function RegisterKaraokePage() {
               </button>
               <button
                 type="button"
-                onClick={() => router.push("/admin/dashboard")}
+                onClick={() =>
+                  router.push("/post-auth?role=admin&redirect_url=/admin/dashboard")
+                }
                 className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 px-5 py-3 font-bold text-white"
               >
                 Go to admin dashboard
