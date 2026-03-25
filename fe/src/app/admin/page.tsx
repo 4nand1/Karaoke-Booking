@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Phone, Clock, LayoutGrid, UtensilsCrossed, Star, MapPin, ShoppingBag, ChevronRight } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
@@ -56,6 +56,7 @@ export default function AdminDashboard() {
   const { getToken } = useAuth()
   const { user } = useUser()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [karaokes, setKaraokes] = useState<Karaoke[]>([])
   const [selectedKaraokeId, setSelectedKaraokeId] = useState("")
@@ -67,6 +68,17 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user) fetchKaraoke()
   }, [user])
+
+  // URL parameter-ээс karaoke ID авах
+  useEffect(() => {
+    const karaokeIdFromUrl = searchParams.get("karaokeId")
+    if (karaokeIdFromUrl && karaokes.length > 0) {
+      const exists = karaokes.some((k) => k._id === karaokeIdFromUrl)
+      if (exists) {
+        setSelectedKaraokeId(karaokeIdFromUrl)
+      }
+    }
+  }, [searchParams, karaokes])
 
   const karaoke =
     karaokes.find((item) => item._id === selectedKaraokeId) ?? karaokes[0] ?? null
@@ -139,8 +151,19 @@ export default function AdminDashboard() {
 
         {sidebarOpen && (
           <div className="px-4 py-4 border-b border-white/5">
-            <p className="text-xs font-black text-white/80 truncate">{karaoke.name}</p>
-            <div className="flex items-center gap-1 mt-1">
+            <p className="text-xs font-black text-white/80 mb-2">Караоке сонго</p>
+            <select
+              value={selectedKaraokeId}
+              onChange={(e) => setSelectedKaraokeId(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"
+            >
+              {karaokes.map((k) => (
+                <option key={k._id} value={k._id}>
+                  {k.name}
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center gap-1 mt-2">
               <MapPin size={10} className="text-purple-500 shrink-0" />
               <p className="text-[10px] text-white/30 truncate">{karaoke.city}</p>
             </div>

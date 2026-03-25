@@ -18,31 +18,76 @@ const getFullName = (clerkUser: any) => {
 
 const syncClerkMetadata = async (
   userId: string,
-  role: "customer" | "karaoke_owner",
-  ownerStatus: "pending" | "approved" | null
+  role: "customer" | "karaoke_owner"
 ) => {
-  await clerkClient.users.updateUserMetadata(userId, {
-    publicMetadata: {
-      role,
-      ownerStatus,
-    },
-  })
+  try {
+    console.log(`[syncClerkMetadata] Syncing userId: ${userId}, role: ${role}`)
+    
+    await clerkClient.users.updateUserMetadata(userId, {
+      publicMetadata: {
+        role,
+      },
+    })
+    
+    console.log(`[syncClerkMetadata] ✅ Successfully synced for userId: ${userId}`)
+  } catch (error) {
+    console.error(`[syncClerkMetadata] ❌ Error syncing metadata for userId: ${userId}`, error)
+    throw error
+  }
 }
 
 const loadCurrentUserState = async (userId: string) => {
   let profile = await UserProfile.findOne({ clerkUserId: userId })
 
+  // Хэрэв профайл олдохгүй байвал, email ашиглаж дахин хайна (ID солигдсан тохиолдол)
   if (!profile) {
-    const clerkUser = await clerkClient.users.getUser(userId)
-
-    profile = await UserProfile.create({
-      clerkUserId: userId,
-      email: getPrimaryEmail(clerkUser),
-      fullName: getFullName(clerkUser),
-      role: "customer",
-      ownerStatus: null,
-      karaokeId: null,
-    })
+    try {
+      const clerkUser = await clerkClient.users.getUser(userId)
+      const email = getPrimaryEmail(clerkUser)
+      
+      // Email ашиглаж MongoDB дээр байгаа хүнийг хайна
+      if (email) {
+        const oldProfile = await UserProfile.findOne({ email })
+        
+        if (oldProfile) {
+          console.log(`[loadCurrentUserState] 🔄 Merging profiles - old clerkUserId: ${oldProfile.clerkUserId}, new clerkUserId: ${userId}`)
+          
+          const oldUserId = oldProfile.clerkUserId
+          
+          // Хуучин ID-г шинээр солих
+          oldProfile.clerkUserId = userId
+          profile = await oldProfile.save()
+          
+          // Каракэнуудын ID-г солихыг оролдоно
+          try {
+            const updateResult = await KaraokeModel.updateMany(
+              { ownerClerkUserId: oldUserId },
+              { ownerClerkUserId: userId }
+            )
+            console.log(`[loadCurrentUserState] 🔄 Updated ${updateResult.modifiedCount} karaokes`)
+          } catch (error) {
+            console.warn(`[loadCurrentUserState] ⚠️ Failed to update karaokes:`, error)
+          }
+          
+          console.log(`[loadCurrentUserState] ✅ Profile merged successfully`)
+        } else {
+          // Email-ээр олдохгүй байвал шинээр үүсгэнэ
+          profile = await UserProfile.create({
+            clerkUserId: userId,
+            email,
+            fullName: getFullName(clerkUser),
+            role: "customer",
+            ownerStatus: null,
+            karaokeId: null,
+          })
+          
+          console.log(`[loadCurrentUserState] ✨ New profile created for userId: ${userId}`)
+        }
+      }
+    } catch (error) {
+      console.error(`[loadCurrentUserState] ❌ Error finding/creating profile:`, error)
+      throw error
+    }
   }
 
   const karaokes = await KaraokeModel.find({ ownerClerkUserId: userId }).sort({
@@ -85,8 +130,7 @@ const loadCurrentUserState = async (userId: string) => {
 
   await syncClerkMetadata(
     userId,
-    (profile as any).role,
-    (profile as any).ownerStatus ?? null
+    (profile as any).role
   )
 
   return { profile, karaoke, karaokes }
@@ -126,7 +170,11 @@ router.get("/me/profile", async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" })
     }
 
+    console.log(`[GET /me/profile] Fetching profile for userId: ${userId}`)
+
     const { profile, karaoke, karaokes } = await loadCurrentUserState(userId)
+
+    console.log(`[GET /me/profile] ✅ Profile loaded - role: ${(profile as any).role}, ownerStatus: ${(profile as any).ownerStatus}`)
 
     return res.json({
       profile,

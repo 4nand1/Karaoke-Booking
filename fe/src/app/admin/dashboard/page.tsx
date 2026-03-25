@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { apiRootUrl } from "@/lib/api-url"
 
 type AdminProfileResponse = {
@@ -208,6 +209,57 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
       </div>
+
+      {karaokes.length > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-4 text-2xl font-bold">Миний Караокенууд</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {karaokes.map((k) => (
+              <Link
+                key={k._id}
+                href={`/admin/page?karaokeId=${k._id}`}
+                className="group rounded-2xl border border-border p-6 transition-all hover:border-primary hover:shadow-lg"
+              >
+                <div className="space-y-3">
+                  <h3 className="text-xl font-semibold group-hover:text-primary">
+                    {k.name}
+                  </h3>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p className="flex items-start gap-2">
+                      <span className="font-medium">📍</span>
+                      {k.address}, {k.city}
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <span className="font-medium">📞</span>
+                      {k.phone}
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <span className="font-medium">⏰</span>
+                      {k.openingHours ||
+                        (k.openingTime && k.closingTime
+                          ? `${k.openingTime} - ${k.closingTime}`
+                          : "Цаг мэдээгүй")}
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <span className="font-medium">✅</span>
+                      {k.approvalStatus === "approved" ? (
+                        <span className="text-green-600">Батлагдсан</span>
+                      ) : (
+                        <span className="text-yellow-600">Хүлээж байгаа</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                      {k.roomTypes?.length ?? 0} өрөө
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border p-4">

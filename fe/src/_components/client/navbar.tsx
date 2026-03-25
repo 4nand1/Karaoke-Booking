@@ -31,7 +31,6 @@ import {
 
 type PublicMetadata = {
   role?: "customer" | "karaoke_owner"
-  ownerStatus?: "pending" | "approved" | null
 }
 
 export default function Navbar() {
@@ -45,11 +44,7 @@ export default function Navbar() {
     return (user?.publicMetadata as PublicMetadata | undefined) ?? {}
   }, [user])
 
-  const isApprovedOwner =
-    metadata.role === "karaoke_owner" && metadata.ownerStatus === "approved"
-
-  const isPendingOwner =
-    metadata.role === "karaoke_owner" && metadata.ownerStatus === "pending"
+  const isKaraokeOwner = metadata.role === "karaoke_owner"
 
   useEffect(() => {
     setMounted(true)
@@ -158,26 +153,16 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                 </>
-              ) : isApprovedOwner ? (
-                /* 🏢 APPROVED OWNER */
+              ) : isKaraokeOwner ? (
+                /* 🏢 KARAOKE OWNER */
                 <>
                   <DropdownMenuItem asChild>
                     <Link
-                      href="/admin/dashboard"
+                      href="/admin"
                       className="flex items-center gap-2"
                     >
                       <LayoutDashboard className="h-4 w-4" />
-                      Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/admin/dashboard?tab=listings"
-                      className="flex items-center gap-2"
-                    >
-                      <Store className="h-4 w-4" />
-                      My karaoke listings
+                      Admin
                     </Link>
                   </DropdownMenuItem>
 
@@ -191,7 +176,7 @@ export default function Navbar() {
                   </SignOutButton>
                 </>
               ) : (
-                /* 👤 CUSTOMER (or pending owner) */
+                /* 👤 CUSTOMER */
                 <>
                   <DropdownMenuItem asChild>
                     <Link href="/my-bookings" className="flex items-center gap-2">
@@ -200,19 +185,7 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
 
-                  {isPendingOwner && (
-                    <DropdownMenuItem disabled className="flex items-center gap-2">
-                      <BadgeCheck className="h-4 w-4" />
-                      Approval pending
-                    </DropdownMenuItem>
-                  )}
-
-                  <SignOutButton redirectUrl="/">
-                    <DropdownMenuItem className="cursor-pointer">
-                      <LogOut className="h-4 w-4" />
-                      Log out
-                    </DropdownMenuItem>
-                  </SignOutButton>
+                  <DropdownMenuSeparator />
 
                   <DropdownMenuItem asChild>
                     <Link
@@ -223,6 +196,13 @@ export default function Navbar() {
                       Register karaoke
                     </Link>
                   </DropdownMenuItem>
+
+                  <SignOutButton redirectUrl="/">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <LogOut className="h-4 w-4" />
+                      Log out
+                    </DropdownMenuItem>
+                  </SignOutButton>
                 </>
               )}
             </DropdownMenuContent>
