@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const slides = [
   { image: "/hero-1.jpg" },
@@ -44,31 +43,6 @@ const HeroCarousel = () => {
           <div className="absolute inset-0 gradient-hero opacity-30 mix-blend-multiply" />
         </motion.div>
       </AnimatePresence>
-
-      {/* Search bar */}
-      <div className="absolute inset-0 flex items-center justify-center px-4 sm:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-xl sm:max-w-2xl"
-        >
-          <div className="glass flex items-center gap-2 rounded-2xl p-2 shadow-2xl">
-            <div className="flex flex-1 items-center gap-3 px-3 sm:px-4">
-              <Search className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
-              <input
-                type="text"
-                placeholder="Search karaoke rooms, venues..."
-                className="w-full bg-transparent py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none sm:py-3 sm:text-base"
-              />
-            </div>
-
-            <Button variant="neon" className="rounded-xl px-5 py-4 sm:px-8 sm:py-6">
-              Search
-            </Button>
-          </div>
-        </motion.div>
-      </div>
 
       {/* arrows */}
       <button

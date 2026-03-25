@@ -122,7 +122,7 @@ export default function PostAuthPage() {
         }
 
         if (profile?.role === "karaoke_owner") {
-          router.replace("/admin/dashboard")
+          router.replace("/admin")
           return
         }
 
