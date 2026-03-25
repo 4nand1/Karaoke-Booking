@@ -361,6 +361,11 @@ export default function KaraokeRegisterForm({
           : "Karaoke registration submitted successfully."
       )
 
+      if (!currentKaraoke) {
+        setFormData(initialForm)
+        setCurrentStep(0)
+      }
+
       if (karaoke) {
         onRegistered?.(karaoke)
       }
