@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
-import { motion } from "framer-motion"
-import { Plus, Trash2, LayoutGrid, Edit2 } from "lucide-react"
+import { BedDouble, Edit3, Plus, Trash2, Users } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
 import { ImageUploadField } from "@/components/ui/image-upload-field"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 
 type Room = {
   _id: string
@@ -20,7 +21,7 @@ type Room = {
 type Karaoke = {
   _id: string
   rooms: Room[]
-  menu: any[]
+  menu: unknown[]
   name: string
   address: string
   city: string
@@ -30,85 +31,144 @@ type Karaoke = {
   closingTime: string
 }
 
-export function RoomsTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: () => void }) {
+type FormState = {
+  name: string
+  type: Room["type"]
+  price: string
+  capacity: string
+  image: string
+}
+
+const emptyForm: FormState = {
+  name: "",
+  type: "Small",
+  price: "",
+  capacity: "",
+  image: "",
+}
+
+export function RoomsTab({
+  karaoke,
+  onRefresh,
+}: {
+  karaoke: Karaoke
+  onRefresh: () => void
+}) {
   const { getToken } = useAuth()
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: "", type: "Small", price: "", capacity: "", image: "" })
+  const [form, setForm] = useState<FormState>(emptyForm)
   const [loading, setLoading] = useState(false)
+
+  const isFormOpen = adding || Boolean(editing)
+  const roomSummary = useMemo(
+    () => ({
+      totalRooms: karaoke.rooms.length,
+      vipRooms: karaoke.rooms.filter((room) => room.type === "VIP").length,
+      avgCapacity: karaoke.rooms.length
+        ? Math.round(
+            karaoke.rooms.reduce((sum, room) => sum + room.capacity, 0) /
+              karaoke.rooms.length
+          )
+        : 0,
+    }),
+    [karaoke.rooms]
+  )
 
   async function handleAdd() {
     if (!form.name || !form.price || !form.capacity || !form.image) {
-      return alert("Бүх талбарыг бөглөнө үү!")
+      return alert("Please complete all required room fields.")
     }
+
     setLoading(true)
     try {
       const token = await getToken()
       const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/rooms`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ rooms: [{ ...form, price: Number(form.price), capacity: Number(form.capacity) }] }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rooms: [
+            {
+              ...form,
+              price: Number(form.price),
+              capacity: Number(form.capacity),
+            },
+          ],
+        }),
       })
-      if (res.ok) {
-        setAdding(false)
-        setForm({ name: "", type: "Small", price: "", capacity: "", image: "" })
-        onRefresh()
-      } else {
+
+      if (!res.ok) {
         const errData = await res.json()
-        alert(`Алдаа: ${errData.message || "Нэмж чадсангүй"}`)
+        throw new Error(errData.message || "Failed to add room")
       }
-    } catch (err) {
-      console.error(err)
-      alert("Сервертэй холбогдоход алдаа гарлаа")
+
+      resetForm()
+      onRefresh()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to add room")
     } finally {
       setLoading(false)
     }
   }
 
   async function handleUpdate() {
-    if (!form.name || !form.price || !form.capacity || !form.image) {
-      return alert("Бүх талбарыг бөглөнө үү!")
+    if (!editing || !form.name || !form.price || !form.capacity || !form.image) {
+      return alert("Please complete all required room fields.")
     }
+
     setLoading(true)
     try {
       const token = await getToken()
-      const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/rooms/${editing}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...form, price: Number(form.price), capacity: Number(form.capacity) }),
-      })
-      if (res.ok) {
-        setEditing(null)
-        setForm({ name: "", type: "Small", price: "", capacity: "", image: "" })
-        onRefresh()
-      } else {
+      const res = await fetch(
+        `${apiRootUrl}/karaoke/${karaoke._id}/rooms/${editing}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            ...form,
+            price: Number(form.price),
+            capacity: Number(form.capacity),
+          }),
+        }
+      )
+
+      if (!res.ok) {
         const errData = await res.json()
-        alert(`Алдаа: ${errData.message || "Шинэчилж чадсангүй"}`)
+        throw new Error(errData.message || "Failed to update room")
       }
-    } catch (err) {
-      console.error(err)
-      alert("Сервертэй холбогдоход алдаа гарлаа")
+
+      resetForm()
+      onRefresh()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to update room")
     } finally {
       setLoading(false)
     }
   }
 
   async function handleDelete(roomId: string) {
-    if (!confirm("Устгахдаа итгэлтэй байна уу?")) return
+    if (!confirm("Delete this room?")) return
+
     try {
       const token = await getToken()
       const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/rooms/${roomId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (res.ok) {
-        onRefresh()
-      } else {
-        alert("Устгаж чадсангүй")
+
+      if (!res.ok) {
+        throw new Error("Failed to delete room")
       }
-    } catch (err) {
-      console.error(err)
-      alert("Сервертэй холбогдоход алдаа гарлаа")
+
+      onRefresh()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to delete room")
     }
   }
 
@@ -118,8 +178,8 @@ export function RoomsTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: 
     setForm({
       name: room.name,
       type: room.type,
-      price: room.price.toString(),
-      capacity: room.capacity.toString(),
+      price: String(room.price),
+      capacity: String(room.capacity),
       image: room.image,
     })
   }
@@ -127,140 +187,206 @@ export function RoomsTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: 
   function resetForm() {
     setAdding(false)
     setEditing(null)
-    setForm({ name: "", type: "Small", price: "", capacity: "", image: "" })
+    setForm(emptyForm)
   }
 
-  return (
-    <div className="space-y-4">
-      <h2 className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">Өрөөнүүд</h2>
+  const inputClassName =
+    "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-200"
+  const labelClassName =
+    "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
 
-      {!(adding || editing) ? (
+  return (
+    <div className="space-y-6 text-slate-950 dark:text-slate-50">
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            Total rooms
+          </p>
+          <p className="mt-3 text-3xl font-semibold">{roomSummary.totalRooms}</p>
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            VIP rooms
+          </p>
+          <p className="mt-3 text-3xl font-semibold">{roomSummary.vipRooms}</p>
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            Avg capacity
+          </p>
+          <p className="mt-3 text-3xl font-semibold">{roomSummary.avgCapacity}</p>
+        </div>
+      </div>
+
+      {!isFormOpen ? (
         <>
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid gap-4 lg:grid-cols-2">
             {karaoke.rooms.map((room) => (
-              <div key={room._id} className="group flex items-center justify-between rounded-[2rem] border border-white/5 bg-white/[0.02] p-6 hover:border-purple-500/30 transition-all hover:bg-white/[0.04]">
-                <div className="flex items-center gap-6">
-                  <div className="h-14 w-14 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform overflow-hidden">
+              <div
+                key={room._id}
+                className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              >
+                <div className="flex gap-4">
+                  <div className="h-24 w-24 overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
                     {room.image ? (
-                      <img src={room.image} alt={room.name} className="h-full w-full object-cover rounded-2xl" />
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={room.image}
+                        alt={room.name}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
-                      <LayoutGrid size={24} />
+                      <div className="flex h-full items-center justify-center">
+                        <BedDouble className="h-5 w-5 text-slate-400" />
+                      </div>
                     )}
                   </div>
-                  <div>
-                    <p className="text-xl font-bold">{room.name}</p>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[10px] font-black uppercase bg-white/5 px-2 py-0.5 rounded text-white/40">{room.type}</span>
-                      <p className="text-sm text-white/40 italic">
-                        {room.capacity} хүн · <span className="text-purple-400 font-bold">₮{room.price.toLocaleString()}</span>
-                      </p>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-lg font-semibold">{room.name}</p>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                          {karaoke.name}
+                        </p>
+                      </div>
+                      <Badge variant="outline">{room.type}</Badge>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600 dark:text-slate-300">
+                      <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
+                        <Users className="h-4 w-4" />
+                        {room.capacity} guests
+                      </span>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
+                        {room.price.toLocaleString()} MNT / hr
+                      </span>
+                    </div>
+
+                    <div className="mt-5 flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-2xl"
+                        onClick={() => startEdit(room)}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-2xl text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        onClick={() => handleDelete(room._id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => startEdit(room)} className="p-3 text-white/10 hover:text-blue-500 hover:bg-blue-500/10 rounded-full transition-all">
-                    <Edit2 size={20} />
-                  </button>
-                  <button onClick={() => handleDelete(room._id)} className="p-3 text-white/10 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all">
-                    <Trash2 size={20} />
-                  </button>
                 </div>
               </div>
             ))}
           </div>
 
           <button
+            type="button"
             onClick={() => setAdding(true)}
-            className="w-full rounded-[2rem] border-2 border-dashed border-white/5 py-8 text-sm font-black uppercase tracking-widest text-white/20 hover:border-purple-500/40 hover:text-purple-500 transition-all group"
+            className="flex w-full items-center justify-center gap-3 rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-5 text-sm font-semibold text-slate-700 transition hover:border-slate-950 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-100 dark:hover:bg-slate-900"
           >
-            <span className="flex items-center justify-center gap-3">
-              <Plus size={20} className="group-hover:rotate-90 transition-transform" /> Add New Room
-            </span>
+            <Plus className="h-4 w-4" />
+            Add new room
           </button>
         </>
       ) : (
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="rounded-[2.5rem] border border-purple-500/30 bg-[#160a2c] p-8 space-y-6"
-        >
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold">
-              {editing ? "Өрөө засах" : "Шинэ өрөө нэмэх"}
-            </h3>
-            <button onClick={resetForm} className="text-white/20 hover:text-white text-xl">✕</button>
+        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                {editing ? "Edit room" : "New room"}
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold">
+                {editing ? "Update room details" : "Add a room"}
+              </h3>
+            </div>
+            <Button type="button" variant="outline" onClick={resetForm} className="rounded-2xl">
+              Cancel
+            </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Өрөөний нэр *</label>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div>
+              <label className={labelClassName}>Room name</label>
               <input
                 value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-purple-500 transition-all"
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                className={inputClassName}
                 placeholder="VIP Gold"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Төрөл</label>
+            <div>
+              <label className={labelClassName}>Room type</label>
               <select
                 value={form.type}
-                onChange={(e) => setForm((p) => ({ ...p, type: e.target.value as any }))}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-purple-500"
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    type: e.target.value as Room["type"],
+                  }))
+                }
+                className={inputClassName}
               >
                 <option value="VIP">VIP</option>
                 <option value="Medium">Medium</option>
                 <option value="Small">Small</option>
               </select>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Үнэ /цаг *</label>
+            <div>
+              <label className={labelClassName}>Price per hour</label>
               <input
                 type="number"
                 value={form.price}
-                onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-purple-500"
+                onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
+                className={inputClassName}
                 placeholder="50000"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Багтаамж *</label>
+            <div>
+              <label className={labelClassName}>Capacity</label>
               <input
                 type="number"
                 value={form.capacity}
-                onChange={(e) => setForm((p) => ({ ...p, capacity: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-purple-500"
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, capacity: e.target.value }))
+                }
+                className={inputClassName}
                 placeholder="10"
               />
             </div>
-            <div className="space-y-2 md:col-span-2">
+            <div className="md:col-span-2">
               <ImageUploadField
-                label="Зураг *"
+                label="Room image"
                 value={form.image ? [form.image] : []}
-                onChange={(images) => setForm((prev) => ({ ...prev, image: images[0] ?? "" }))}
-                theme="dark"
+                onChange={(images) =>
+                  setForm((prev) => ({ ...prev, image: images[0] ?? "" }))
+                }
                 required
-                helperText="Өрөөний нэг зураг сонгоно."
+                helperText="Upload one image to represent this room."
               />
             </div>
           </div>
 
-          <div className="flex gap-4 pt-4">
-            <button
+          <div className="mt-6 flex justify-end">
+            <Button
+              type="button"
               onClick={editing ? handleUpdate : handleAdd}
               disabled={loading}
-              className="flex-1 bg-gradient-to-r from-purple-600 to-purple-800 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-purple-900/40 disabled:opacity-50"
+              className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
             >
-              {loading ? "Хадгалж байна..." : editing ? "Шинэчлэх" : "Хадгалах"}
-            </button>
-            <button
-              onClick={resetForm}
-              className="px-8 border border-white/10 rounded-2xl text-white/40 hover:bg-white/5 transition-colors"
-            >
-              Цуцлах
-            </button>
+              {loading ? "Saving..." : editing ? "Save changes" : "Create room"}
+            </Button>
           </div>
-        </motion.div>
+        </div>
       )}
     </div>
   )

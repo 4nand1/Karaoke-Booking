@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -49,25 +49,37 @@ export default function Navbar() {
   const { user, isSignedIn } = useUser()
   const { getToken, isLoaded } = useAuth()
 
+  const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") return false
+
+    const savedTheme = localStorage.getItem("theme")
+
+    if (savedTheme === "dark") return true
+    if (savedTheme === "light") return false
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+  })
   const [scrolled, setScrolled] = useState(false)
-  const [language, setLanguage] = useState<"EN" | "MN">("EN")
+  const [language, setLanguage] = useState<"EN" | "MN">(() => {
+    if (typeof window === "undefined") return "EN"
+
+    const savedLanguage = localStorage.getItem("language")
+    return savedLanguage === "MN" ? "MN" : "EN"
+  })
   const [searchQuery, setSearchQuery] = useState("")
-  const [profileRole, setProfileRole] = useState<"customer" | "karaoke_owner" | null>(null)
-  const [profileOwnerStatus, setProfileOwnerStatus] = useState<
-    "pending" | "approved" | null
-  >(null)
+  const [profileMetadata, setProfileMetadata] = useState<PublicMetadata | null>(null)
+  const hasHydrated = useRef(false)
 
   const metadata = useMemo(() => {
     return (user?.publicMetadata as PublicMetadata | undefined) ?? {}
   }, [user])
 
   useEffect(() => {
-    const loadProfile = async () => {
+    const syncProfile = async () => {
       if (!isLoaded) return
 
       if (!isSignedIn) {
-        setProfileRole(null)
-        setProfileOwnerStatus(null)
+        setProfileMetadata(null)
         return
       }
 
@@ -75,8 +87,7 @@ export default function Navbar() {
         const token = await getToken()
 
         if (!token) {
-          setProfileRole(null)
-          setProfileOwnerStatus(null)
+          setProfileMetadata(null)
           return
         }
 
@@ -86,47 +97,32 @@ export default function Navbar() {
           },
         })
 
-        setProfileRole(res.data?.profile?.role ?? null)
-        setProfileOwnerStatus(res.data?.profile?.ownerStatus ?? null)
+        setProfileMetadata({
+          role: res.data?.profile?.role,
+          ownerStatus: res.data?.profile?.ownerStatus ?? null,
+        })
       } catch {
-        setProfileRole(null)
-        setProfileOwnerStatus(null)
+        setProfileMetadata(null)
       }
     }
 
-    void loadProfile()
+    void syncProfile()
   }, [getToken, isLoaded, isSignedIn, user?.id])
 
+  const effectiveMetadata = profileMetadata ?? metadata
+
   const isApprovedOwner =
-    (metadata.role === "karaoke_owner" && metadata.ownerStatus === "approved") ||
-    (profileRole === "karaoke_owner" && profileOwnerStatus === "approved")
+    effectiveMetadata.role === "karaoke_owner" &&
+    effectiveMetadata.ownerStatus === "approved"
 
   const isAdmin =
-    metadata.role === "admin" || metadata.role === "karaoke_owner" || isApprovedOwner
+    effectiveMetadata.role === "admin" ||
+    effectiveMetadata.role === "karaoke_owner" ||
+    isApprovedOwner
   const isRegularUser = isSignedIn && !isAdmin
 
   useEffect(() => {
-    setMounted(true)
-
-    const savedTheme = localStorage.getItem("theme")
-    const savedLanguage = localStorage.getItem("language") as "EN" | "MN" | null
-
-    if (savedLanguage === "EN" || savedLanguage === "MN") {
-      setLanguage(savedLanguage)
-    }
-
-    if (savedTheme === "dark") {
-      setDark(true)
-      document.documentElement.classList.add("dark")
-    } else if (savedTheme === "light") {
-      setDark(false)
-      document.documentElement.classList.remove("dark")
-    } else {
-      const systemPrefersDark =
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      setDark(systemPrefersDark)
-      document.documentElement.classList.toggle("dark", systemPrefersDark)
-    }
+    hasHydrated.current = true
   }, [])
 
   useEffect(() => {
@@ -136,16 +132,21 @@ export default function Navbar() {
   }, [])
 
   useEffect(() => {
-    if (!mounted) return
+    if (!hasHydrated.current) return
     document.documentElement.classList.toggle("dark", dark)
     localStorage.setItem("theme", dark ? "dark" : "light")
   }, [dark])
 
-  const toggleTheme = () => {
-    const nextDark = !dark
-    document.documentElement.classList.toggle("dark", nextDark)
-    window.localStorage.setItem("theme", nextDark ? "dark" : "light")
-    window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
+  useEffect(() => {
+    if (!hasHydrated.current) return
+    localStorage.setItem("language", language)
+  }, [language])
+
+  const handleSearch = () => {
+    const trimmed = searchQuery.trim()
+    if (!trimmed) return
+    router.push(`/search?q=${encodeURIComponent(trimmed)}`)
+    setSearchQuery("")
   }
 
   useEffect(() => {
@@ -264,7 +265,7 @@ export default function Navbar() {
               ) : isAdmin ? (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link href="/admin" className="flex items-center gap-2">
+                    <Link href="/admin/dashboard" className="flex items-center gap-2">
                       <LayoutDashboard className="h-4 w-4" />
                       Admin dashboard
                     </Link>
@@ -305,7 +306,7 @@ export default function Navbar() {
             variant="glass"
             size="icon"
             className="rounded-xl"
-            onClick={toggleTheme}
+            onClick={() => setDark((prev) => !prev)}
             type="button"
           >
             <AnimatePresence mode="wait">
