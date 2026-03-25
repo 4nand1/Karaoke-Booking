@@ -23,6 +23,7 @@ import { SignOutButton, useAuth, useUser } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { api } from "@/lib/axios"
+import { clerkEnabled } from "@/lib/clerk-config"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -44,10 +45,24 @@ type ProfileResponse = {
   } | null
 }
 
-export default function Navbar() {
+type NavbarContentProps = {
+  getToken?: (() => Promise<string | null>) | null
+  isAuthLoaded: boolean
+  isSignedIn: boolean
+  user?: {
+    id?: string | null
+    firstName?: string | null
+    publicMetadata?: PublicMetadata
+  } | null
+}
+
+function NavbarContent({
+  getToken,
+  isAuthLoaded,
+  isSignedIn,
+  user,
+}: NavbarContentProps) {
   const router = useRouter()
-  const { user, isSignedIn } = useUser()
-  const { getToken, isLoaded } = useAuth()
 
   const [dark, setDark] = useState(() => {
     if (typeof window === "undefined") return false
@@ -76,7 +91,7 @@ export default function Navbar() {
 
   useEffect(() => {
     const syncProfile = async () => {
-      if (!isLoaded) return
+      if (!isAuthLoaded || !getToken) return
 
       if (!isSignedIn) {
         setProfileMetadata(null)
@@ -107,7 +122,7 @@ export default function Navbar() {
     }
 
     void syncProfile()
-  }, [getToken, isLoaded, isSignedIn, user?.id])
+  }, [getToken, isAuthLoaded, isSignedIn, user?.id])
 
   const effectiveMetadata = profileMetadata ?? metadata
 
@@ -317,4 +332,30 @@ export default function Navbar() {
       </div>
     </motion.nav>
   )
+}
+
+function NavbarWithClerk() {
+  const { user, isSignedIn } = useUser()
+  const { getToken, isLoaded } = useAuth()
+
+  return (
+    <NavbarContent
+      getToken={getToken}
+      isAuthLoaded={Boolean(isLoaded)}
+      isSignedIn={Boolean(isSignedIn)}
+      user={user}
+    />
+  )
+}
+
+function NavbarWithoutClerk() {
+  return <NavbarContent isAuthLoaded={true} isSignedIn={false} user={null} />
+}
+
+export default function Navbar() {
+  if (!clerkEnabled) {
+    return <NavbarWithoutClerk />
+  }
+
+  return <NavbarWithClerk />
 }
