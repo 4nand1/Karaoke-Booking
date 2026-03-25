@@ -190,6 +190,27 @@ router.post("/me/role", async (req, res) => {
     const currentRole = normalizeRole((profile as any).role)
     const currentOwnerStatus = ((profile as any).ownerStatus ?? null) as OwnerStatus
 
+    if (requestedRole === "karaoke_owner" && currentRole !== "karaoke_owner") {
+      profile = await UserProfile.findOneAndUpdate(
+        { clerkUserId: userId },
+        {
+          role: "karaoke_owner",
+          ownerStatus: "approved",
+          email: getPrimaryEmail(clerkUser),
+          fullName: getFullName(clerkUser),
+        },
+        { new: true }
+      )
+
+      await syncClerkMetadata(userId, "karaoke_owner", "approved")
+
+      return res.json({
+        message: "Role updated successfully",
+        profile,
+        canRegisterKaraoke: true,
+      })
+    }
+
     await syncClerkMetadata(userId, currentRole, currentOwnerStatus)
 
     return res.json({

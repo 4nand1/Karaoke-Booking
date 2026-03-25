@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { SignIn } from "@clerk/nextjs"
 import { useSearchParams } from "next/navigation"
 import { clerkEnabled } from "@/lib/clerk-config"
@@ -12,27 +12,35 @@ const STORAGE_KEY = "karaoke_app_selected_role"
 export default function SignInPage() {
   const searchParams = useSearchParams()
   const queryRole = searchParams.get("role")
+  const redirectUrlFromQuery =
+    searchParams.get("redirect_url") ?? searchParams.get("redirectUrl")
 
   const [selectedRole, setSelectedRole] = useState<UiRole>(
     queryRole === "admin" ? "admin" : "user"
   )
 
-  useEffect(() => {
-    const savedRole =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem(STORAGE_KEY)
-        : null
+  const safeRedirectUrl =
+    redirectUrlFromQuery && redirectUrlFromQuery.startsWith("/")
+      ? redirectUrlFromQuery
+      : null
 
-    if (queryRole === "admin" || queryRole === "user") {
-      setSelectedRole(queryRole)
-      window.localStorage.setItem(STORAGE_KEY, queryRole)
-      return
-    }
+  const authParams = new URLSearchParams()
 
-    if (savedRole === "admin" || savedRole === "user") {
-      setSelectedRole(savedRole)
-    }
-  }, [queryRole])
+  if (selectedRole === "admin") {
+    authParams.set("role", "admin")
+  }
+
+  if (safeRedirectUrl) {
+    authParams.set("redirect_url", safeRedirectUrl)
+  }
+
+  const postAuthUrl = authParams.size
+    ? `/post-auth?${authParams.toString()}`
+    : "/post-auth"
+
+  const signUpUrl = authParams.size
+    ? `/sign-up?${authParams.toString()}`
+    : "/sign-up"
 
   if (!clerkEnabled) {
     return (
@@ -90,8 +98,8 @@ export default function SignInPage() {
       <SignIn
         path="/sign-in"
         routing="path"
-        signUpUrl="/sign-up"
-        fallbackRedirectUrl="/post-auth"
+        signUpUrl={signUpUrl}
+        fallbackRedirectUrl={postAuthUrl}
       />
     </div>
   )

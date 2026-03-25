@@ -49,8 +49,6 @@ export default function Navbar() {
   const { user, isSignedIn } = useUser()
   const { getToken, isLoaded } = useAuth()
 
-  const [dark, setDark] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [language, setLanguage] = useState<"EN" | "MN">("EN")
   const [searchQuery, setSearchQuery] = useState("")
@@ -141,7 +139,14 @@ export default function Navbar() {
     if (!mounted) return
     document.documentElement.classList.toggle("dark", dark)
     localStorage.setItem("theme", dark ? "dark" : "light")
-  }, [dark, mounted])
+  }, [dark])
+
+  const toggleTheme = () => {
+    const nextDark = !dark
+    document.documentElement.classList.toggle("dark", nextDark)
+    window.localStorage.setItem("theme", nextDark ? "dark" : "light")
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
+  }
 
   useEffect(() => {
     if (!mounted) return
@@ -300,7 +305,7 @@ export default function Navbar() {
             variant="glass"
             size="icon"
             className="rounded-xl"
-            onClick={() => setDark((prev) => !prev)}
+            onClick={toggleTheme}
             type="button"
           >
             <AnimatePresence mode="wait">

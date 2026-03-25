@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter, useSearchParams } from "next/navigation"
+import type { AxiosError } from "axios"
 import { api } from "@/lib/axios"
 
 type UiRole = "user" | "admin"
@@ -50,12 +51,24 @@ export default function PostAuthPage() {
             ? redirectUrlFromQuery
             : null
 
+        const queryRole = searchParams.get("role")
+
         const savedRole =
           typeof window !== "undefined"
             ? window.localStorage.getItem(STORAGE_KEY)
             : null
 
-        const selectedRole: UiRole = savedRole === "admin" ? "admin" : "user"
+        const selectedRole: UiRole =
+          queryRole === "admin" || queryRole === "user"
+            ? queryRole
+            : savedRole === "admin"
+              ? "admin"
+              : "user"
+
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(STORAGE_KEY, selectedRole)
+        }
+
         const roleForApi: ApiRole =
           selectedRole === "admin" ? "karaoke_owner" : "customer"
 
@@ -67,7 +80,11 @@ export default function PostAuthPage() {
 
         const existingRole = meRes.data?.profile?.role
 
-        if (!existingRole) {
+        const shouldSyncRole =
+          !existingRole ||
+          (selectedRole === "admin" && existingRole !== "karaoke_owner")
+
+        if (shouldSyncRole) {
           await api.post(
             "/me/role",
             { role: roleForApi },
@@ -106,8 +123,12 @@ export default function PostAuthPage() {
         }
 
         router.replace("/")
-      } catch (err: any) {
-        setError(err?.response?.data?.message || "Failed to complete login.")
+      } catch (err) {
+        const message =
+          (err as AxiosError<{ message?: string }>).response?.data?.message ||
+          "Failed to complete login."
+
+        setError(message)
       }
     }
 

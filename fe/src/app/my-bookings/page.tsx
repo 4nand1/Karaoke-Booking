@@ -2,14 +2,35 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
+import Image from "next/image"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CalendarDays, Clock3, CircleCheck, CreditCard, Music4 } from "lucide-react"
+import {
+  CalendarDays,
+  Clock3,
+  CircleCheck,
+  CreditCard,
+  MapPin,
+  Mic2,
+  Music4,
+  Users,
+} from "lucide-react"
 import { api } from "@/lib/axios"
 
 type Booking = {
   _id: string
   customerName?: string
   karaokeId?: string
+  karaokeName?: string
+  karaokeAddress?: string
+  karaokeCity?: string
+  karaokeImage?: string
+  roomId?: string
+  roomName?: string
+  roomType?: string
+  roomPrice?: number | null
+  roomCapacity?: number | null
+  roomImage?: string
   bookingDate?: string
   bookingSlots?: string[]
   guestCount?: number
@@ -96,42 +117,90 @@ export default function MyBookingsPage() {
         ) : (
           <div className="mt-6 space-y-4">
             {bookings.map((booking) => (
-              <div key={booking._id} className="rounded-2xl border bg-card p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="space-y-2">
-                    <p className="font-semibold">
-                      {booking.customerName || "Your karaoke booking"}
-                    </p>
-                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <CalendarDays className="h-4 w-4" />
-                        {booking.bookingDate || "Date not set"}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock3 className="h-4 w-4" />
-                        {booking.bookingSlots?.join(", ") || "No time slots"}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Music4 className="h-4 w-4" />
-                        {booking.guestCount || 1} guest(s)
-                      </span>
-                    </div>
+              <div key={booking._id} className="overflow-hidden rounded-2xl border bg-card">
+                <div className="grid md:grid-cols-[220px_1fr]">
+                  <div className="relative min-h-48 bg-muted">
+                    <Image
+                      src={booking.karaokeImage || booking.roomImage || "/karaoke.jpg"}
+                      alt={booking.karaokeName || "Booked karaoke"}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 220px"
+                    />
                   </div>
 
-                  <div className="space-y-2 text-sm sm:text-right">
-                    <div className="flex flex-wrap gap-2 sm:justify-end">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-primary">
-                        <CircleCheck className="h-4 w-4" />
-                        {booking.status || "pending"}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-3 py-1 text-green-600">
-                        <CreditCard className="h-4 w-4" />
-                        {booking.paymentStatus || "unpaid"}
-                      </span>
+                  <div className="p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-[0.2em] text-primary/70">
+                            Booked karaoke
+                          </p>
+                          <p className="mt-1 text-xl font-semibold">
+                            {booking.karaokeName || "Your karaoke booking"}
+                          </p>
+                          {(booking.karaokeAddress || booking.karaokeCity) && (
+                            <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                              <MapPin className="h-4 w-4" />
+                              {[booking.karaokeAddress, booking.karaokeCity]
+                                .filter(Boolean)
+                                .join(", ")}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                          <span className="flex items-center gap-2">
+                            <Mic2 className="h-4 w-4" />
+                            {booking.roomName
+                              ? `${booking.roomName}${booking.roomType ? ` · ${booking.roomType}` : ""}`
+                              : "Room info unavailable"}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4" />
+                            {booking.bookingDate || "Date not set"}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <Clock3 className="h-4 w-4" />
+                            {booking.bookingSlots?.join(", ") || "No time slots"}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            {booking.guestCount || 1} guest(s)
+                          </span>
+                          {booking.roomCapacity ? (
+                            <span className="flex items-center gap-2">
+                              <Music4 className="h-4 w-4" />
+                              Capacity {booking.roomCapacity}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 text-sm sm:text-right">
+                        <div className="flex flex-wrap gap-2 sm:justify-end">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-primary">
+                            <CircleCheck className="h-4 w-4" />
+                            {booking.status || "pending"}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-3 py-1 text-green-600">
+                            <CreditCard className="h-4 w-4" />
+                            {booking.paymentStatus || "unpaid"}
+                          </span>
+                        </div>
+                        <p className="font-semibold text-foreground">
+                          ₮{(booking.totalAmount ?? 0).toLocaleString()}
+                        </p>
+                        {booking.karaokeId ? (
+                          <Link
+                            href={`/karaoke/${booking.karaokeId}`}
+                            className="inline-flex rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                          >
+                            View karaoke
+                          </Link>
+                        ) : null}
+                      </div>
                     </div>
-                    <p className="font-semibold text-foreground">
-                      ₮{(booking.totalAmount ?? 0).toLocaleString()}
-                    </p>
                   </div>
                 </div>
               </div>
