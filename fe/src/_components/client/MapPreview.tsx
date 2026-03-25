@@ -160,8 +160,13 @@ export default function MapPreview() {
   }, [nearbyKaraokes, selectedId, userLocation]);
 
   const fitPoints = useMemo<[number, number][]>(() => {
-    return getFitPoints(nearbyKaraokes, userLocation);
-  }, [nearbyKaraokes, userLocation]);
+    const focusTargets =
+      paginatedKaraokes.length > 0
+        ? paginatedKaraokes
+        : nearbyKaraokes.slice(0, ITEMS_PER_PAGE);
+
+    return getFitPoints(focusTargets, userLocation);
+  }, [ITEMS_PER_PAGE, nearbyKaraokes, paginatedKaraokes, userLocation]);
 
   const karaokeIcon = useMemo<DivIcon | undefined>(() => {
     if (!leafletLib) return undefined;
@@ -334,7 +339,7 @@ export default function MapPreview() {
               >
                 <MapTileLayer />
                 <MapZoomControl />
-                <MapAutoFit points={fitPoints} />
+                <MapAutoFit points={fitPoints} maxZoom={15} />
 
                 {userLocation && userIcon && (
                   <Marker

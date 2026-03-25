@@ -48,7 +48,7 @@ type KaraokeCardViewModel = {
   price: string
   startingPrice: number | null
   hours: string
-  roomSize: "small" | "medium" | "large" | "vip" | "all"
+  roomSizes: Array<"small" | "large" | "vip">
   isOpenNow: boolean
   rooms: Array<{
     _id: string
@@ -85,15 +85,47 @@ function getIsOpenNow(openingTime?: string, closingTime?: string) {
   return currentMinutes >= open || currentMinutes <= close
 }
 
-function getRoomSize(roomTypes?: string[]): "small" | "medium" | "large" | "vip" | "all" {
-  const normalized = roomTypes?.map((type) => type.toLowerCase()) ?? []
+function getRoomSizes(
+  karaoke: Pick<KaraokeListing, "roomTypes" | "rooms" | "capacity">
+): Array<"small" | "large" | "vip"> {
+  const sizes = new Set<"small" | "large" | "vip">()
 
-  if (normalized.includes("vip")) return "vip"
-  if (normalized.includes("large")) return "large"
-  if (normalized.includes("medium")) return "medium"
-  if (normalized.includes("small")) return "small"
+  const addFromText = (value?: string | null, capacity?: number | null) => {
+    const normalized = value?.trim().toLowerCase() ?? ""
 
-  return "all"
+    if (normalized.includes("vip")) {
+      sizes.add("vip")
+      return
+    }
+
+    if (normalized.includes("large")) {
+      sizes.add("large")
+      return
+    }
+
+    if (normalized.includes("small")) {
+      sizes.add("small")
+      return
+    }
+
+    if (normalized.includes("medium")) {
+      sizes.add((capacity ?? karaoke.capacity ?? 0) >= 8 ? "large" : "small")
+      return
+    }
+
+    if (typeof capacity === "number") {
+      sizes.add(capacity >= 8 ? "large" : "small")
+    }
+  }
+
+  karaoke.roomTypes?.forEach((roomType) => addFromText(roomType, karaoke.capacity))
+  karaoke.rooms?.forEach((room) => addFromText(room.type, room.capacity))
+
+  if (sizes.size === 0 && typeof karaoke.capacity === "number") {
+    sizes.add(karaoke.capacity >= 8 ? "large" : "small")
+  }
+
+  return Array.from(sizes)
 }
 
 function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
@@ -124,7 +156,7 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
       karaoke.openingHours ||
       [karaoke.openingTime, karaoke.closingTime].filter(Boolean).join(" - ") ||
       "Hours not available",
-    roomSize: getRoomSize(karaoke.roomTypes),
+    roomSizes: getRoomSizes(karaoke),
     isOpenNow: getIsOpenNow(karaoke.openingTime, karaoke.closingTime),
     rooms: karaoke.rooms ?? [],
   }
@@ -192,7 +224,10 @@ const Index = () => {
         return false
       }
 
-      if (filters.roomSize !== "all" && spot.roomSize !== filters.roomSize) {
+      if (
+        filters.roomSize !== "all" &&
+        !spot.roomSizes.includes(filters.roomSize)
+      ) {
         return false
       }
 

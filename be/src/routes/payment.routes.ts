@@ -1,6 +1,7 @@
 import express, { Router } from "express"
 import {
   createCheckoutSession,
+  verifyCheckoutSession,
   handleStripeWebhook,
 } from "../controllers/paymentController"
 
@@ -17,5 +18,7 @@ paymentRouter.post(
   express.json(),
   createCheckoutSession
 )
+
+paymentRouter.get("/checkout-session/:sessionId", verifyCheckoutSession)
 
 export default paymentRouter

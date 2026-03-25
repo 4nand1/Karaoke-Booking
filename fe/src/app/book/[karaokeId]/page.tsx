@@ -240,7 +240,33 @@ export default function BookingPage() {
       setPaymentLoading(true);
       setFeedback(null);
 
+      const orderResponse = await api.post("/orders", {
+        karaokeId: karaoke._id,
+        roomId: selectedRoom._id,
+        customerName: formData.customerName.trim(),
+        customerPhone: formData.customerPhone.trim(),
+        bookingDate: selectedDate,
+        bookingSlots: selectedSlots,
+        guestCount: Number(formData.guestCount) || 1,
+        menuItems: selectedMenuItems.map(({ item, quantity }) => ({
+          itemId: item._id,
+          name: item.name,
+          price: item.price ?? 0,
+          quantity,
+        })),
+        totalAmount: estimatedTotal > 0 ? estimatedTotal : selectedRoom.price,
+        status: "pending",
+        paymentStatus: "unpaid",
+      });
+
+      const bookingId = orderResponse.data?.order?._id;
+
+      if (!bookingId || typeof bookingId !== "string") {
+        throw new Error("Booking draft was not created");
+      }
+
       const response = await api.post("/payments/create-checkout-session", {
+        bookingId,
         roomName: `${karaoke.name} - ${selectedRoom.name}`,
         amount: estimatedTotal > 0 ? estimatedTotal : selectedRoom.price,
       });

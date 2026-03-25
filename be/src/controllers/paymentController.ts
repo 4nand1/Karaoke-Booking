@@ -1,5 +1,6 @@
 import type { Request, Response } from "express"
 import Stripe from "stripe"
+import { OrderModel } from "../database/schema/order.schema"
 
 type CreateCheckoutSessionBody = {
   bookingId?: string
@@ -75,6 +76,12 @@ export const createCheckoutSession = async (
       },
     })
 
+    if (bookingId && session.id) {
+      await OrderModel.findByIdAndUpdate(bookingId, {
+        stripeSessionId: session.id,
+      })
+    }
+
     if (!session.url) {
       return res.status(500).json({
         message: "Stripe checkout session URL was not returned",
@@ -90,6 +97,50 @@ export const createCheckoutSession = async (
     return res.status(500).json({
       message:
         error instanceof Error ? error.message : "Failed to create checkout session",
+    })
+  }
+}
+
+export const verifyCheckoutSession = async (req: Request, res: Response) => {
+  try {
+    const stripe = getStripeClient()
+    const rawSessionId = req.params.sessionId
+    const sessionId =
+      typeof rawSessionId === "string" ? rawSessionId.trim() : ""
+
+    if (!sessionId) {
+      return res.status(400).json({ message: "Missing checkout session id" })
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId)
+    const bookingId =
+      typeof session.metadata?.bookingId === "string"
+        ? session.metadata.bookingId.trim()
+        : ""
+    const isPaid =
+      session.payment_status === "paid" || session.status === "complete"
+
+    if (bookingId && isPaid) {
+      await OrderModel.findByIdAndUpdate(bookingId, {
+        status: "confirmed",
+        paymentStatus: "paid",
+        stripeSessionId: session.id,
+      })
+    }
+
+    return res.status(200).json({
+      sessionId: session.id,
+      bookingId: bookingId || null,
+      paid: isPaid,
+      paymentStatus: session.payment_status,
+      status: session.status,
+    })
+  } catch (error) {
+    console.error("verifyCheckoutSession error:", error)
+
+    return res.status(500).json({
+      message:
+        error instanceof Error ? error.message : "Failed to verify checkout session",
     })
   }
 }
@@ -122,14 +173,22 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session
+        const bookingId = session.metadata?.bookingId?.trim()
+
+        if (bookingId) {
+          await OrderModel.findByIdAndUpdate(bookingId, {
+            status: "confirmed",
+            paymentStatus: "paid",
+            stripeSessionId: session.id,
+          })
+        }
 
         console.log("Stripe checkout completed:", {
           sessionId: session.id,
-          bookingId: session.metadata?.bookingId || null,
+          bookingId: bookingId || null,
           roomName: session.metadata?.roomName || null,
         })
 
-        // TODO: Update booking payment status in MongoDB here.
         break
       }
       default:
