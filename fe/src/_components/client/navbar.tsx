@@ -149,6 +149,18 @@ export default function Navbar() {
     setSearchQuery("")
   }
 
+  useEffect(() => {
+    if (!mounted) return
+    localStorage.setItem("language", language)
+  }, [language, mounted])
+
+  const handleSearch = () => {
+    const trimmed = searchQuery.trim()
+    if (!trimmed) return
+    router.push(`/search?q=${encodeURIComponent(trimmed)}`)
+    setSearchQuery("")
+  }
+
   return (
     <motion.nav
       className={`fixed left-0 right-0 top-0 z-50 transition-all duration-500 ${
