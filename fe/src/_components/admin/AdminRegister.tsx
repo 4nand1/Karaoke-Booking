@@ -138,7 +138,7 @@ export default function KaraokeRegisterForm() {
       router.push(
         karaokeId
           ? `/admin/karaoke/${encodeURIComponent(karaokeId)}/rooms`
-          : "/admin/dashboard"
+          : "/admin"
       )
     } catch (err) {
       const errorMessage =
