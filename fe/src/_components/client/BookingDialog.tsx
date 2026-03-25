@@ -6,7 +6,6 @@ import {
   MapPin,
   Star,
   Clock,
-  Navigation,
   Users,
   Music,
   Utensils,
@@ -98,7 +97,6 @@ const BookingDialog = ({
 
   const openHour = hours.split("–")[0]?.trim() ?? "";
   const closeHour = hours.split("–")[1]?.trim() ?? "";
-  const distance = (Math.random() * 4 + 0.5).toFixed(1);
   const roomOptions = rooms?.length ? rooms : defaultRoomOptions;
   const selectedRoomOption =
     selectedRoom !== null ? roomOptions[selectedRoom] ?? null : null;
@@ -185,7 +183,6 @@ const BookingDialog = ({
           <div className="grid grid-cols-2 gap-3">
             {[
               { icon: MapPin, label: "Location", value: location },
-              { icon: Navigation, label: "Distance", value: `${distance} km away` },
               { icon: Clock, label: "Opens", value: openHour },
               { icon: Clock, label: "Closes", value: closeHour },
               { icon: Star, label: "Rating", value: `${rating} / 5.0` },

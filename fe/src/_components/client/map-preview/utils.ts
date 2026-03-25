@@ -125,16 +125,6 @@ export function getBookingStatus(
   };
 }
 
-export function isOpenAndAvailableNow(karaoke: Karaoke, orders: Order[]) {
-  const isOpenNow = getIsOpenNow(karaoke.openingTime, karaoke.closingTime);
-
-  if (!isOpenNow) {
-    return false;
-  }
-
-  return getBookingStatus(karaoke, orders, isOpenNow).label === "Available now";
-}
-
 export function getNearbyKaraokes(
   karaokes: Karaoke[],
   userLocation: UserLocation | null

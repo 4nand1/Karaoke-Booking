@@ -12,6 +12,7 @@ import { Suspense, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { apiRootUrl } from "@/lib/api-url"
 import { useLanguage } from "@/lib/language"
+import { formatDisplayLocation } from "@/lib/location"
 import SiteReviews from "@/_components/client/SiteReviews"
 
 type KaraokeListing = {
@@ -145,7 +146,7 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
     id: karaoke._id,
     image: karaoke.image || karaoke.images?.[0] || FALLBACK_IMAGE,
     name: karaoke.name,
-    location: [karaoke.address, karaoke.city].filter(Boolean).join(", "),
+    location: formatDisplayLocation(karaoke.address, karaoke.city),
     rating: karaoke.rating ?? null,
     price:
       typeof karaoke.pricePerHour === "number"

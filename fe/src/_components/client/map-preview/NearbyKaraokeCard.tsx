@@ -2,12 +2,12 @@
 
 import { Clock3, MapPin, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDisplayLocation } from "@/lib/location";
 import type { Order, KaraokeWithDistance } from "./types";
 import {
   getBookingStatus,
   getIsOpenNow,
   getKaraokeImage,
-  isOpenAndAvailableNow,
 } from "./utils";
 
 type NearbyKaraokeCardProps = {
@@ -28,15 +28,11 @@ export default function NearbyKaraokeCard({
   const isOpenNow = getIsOpenNow(karaoke.openingTime, karaoke.closingTime);
   const imageSrc = getKaraokeImage(karaoke);
   const bookingStatus = getBookingStatus(karaoke, orders, isOpenNow);
-  const isHighlighted = isOpenAndAvailableNow(karaoke, orders);
 
   return (
     <div
       className={[
         "w-full rounded-2xl border bg-card p-4 text-left shadow-sm transition-all duration-200",
-        isHighlighted
-          ? "border-emerald-400/40 shadow-[0_0_0_1px_rgba(16,185,129,0.12),0_16px_36px_rgba(16,185,129,0.12)]"
-          : "",
         isSelected
           ? "border-primary ring-1 ring-primary/30"
           : "border-border hover:-translate-y-0.5 hover:shadow-md",
@@ -59,12 +55,6 @@ export default function NearbyKaraokeCard({
                 <h3 className="font-semibold text-card-foreground">
                   {karaoke.name}
                 </h3>
-                {isHighlighted ? (
-                  <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-2 py-1 text-[11px] font-semibold text-emerald-600">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Recommended now
-                  </div>
-                ) : null}
               </div>
               <span
                 className={[
@@ -92,7 +82,7 @@ export default function NearbyKaraokeCard({
             <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <p>
-                {karaoke.address}, {karaoke.city}
+                {formatDisplayLocation(karaoke.address, karaoke.city)}
               </p>
             </div>
 
@@ -110,7 +100,7 @@ export default function NearbyKaraokeCard({
             {typeof karaoke.distance === "number" && (
               <div className="mt-2 flex items-center gap-2 text-sm font-medium text-primary">
                 <Navigation className="h-4 w-4" />
-                <span>{karaoke.distance.toFixed(1)} km away</span>
+                <span>{karaoke.distance.toFixed(1)} km</span>
               </div>
             )}
           </div>

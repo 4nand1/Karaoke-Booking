@@ -17,11 +17,7 @@ import type {
   Order,
   UserLocation,
 } from "./map-preview/types";
-import {
-  getFitPoints,
-  getNearbyKaraokes,
-  isOpenAndAvailableNow,
-} from "./map-preview/utils";
+import { getFitPoints, getNearbyKaraokes } from "./map-preview/utils";
 
 export default function MapPreview() {
   const ITEMS_PER_PAGE = 4;
@@ -173,19 +169,9 @@ export default function MapPreview() {
     return createKaraokeIcon(leafletLib, false);
   }, [leafletLib]);
 
-  const availableKaraokeIcon = useMemo<DivIcon | undefined>(() => {
-    if (!leafletLib) return undefined;
-    return createKaraokeIcon(leafletLib, false, "#22c55e");
-  }, [leafletLib]);
-
   const activeKaraokeIcon = useMemo<DivIcon | undefined>(() => {
     if (!leafletLib) return undefined;
     return createKaraokeIcon(leafletLib, true);
-  }, [leafletLib]);
-
-  const activeAvailableKaraokeIcon = useMemo<DivIcon | undefined>(() => {
-    if (!leafletLib) return undefined;
-    return createKaraokeIcon(leafletLib, true, "#22c55e");
   }, [leafletLib]);
 
   const userIcon = useMemo<DivIcon | undefined>(() => {
@@ -365,15 +351,8 @@ export default function MapPreview() {
                     return null;
                   }
 
-                  const isAvailableNow = isOpenAndAvailableNow(karaoke, orders);
                   const icon =
-                    selectedId === karaoke._id
-                      ? isAvailableNow
-                        ? activeAvailableKaraokeIcon
-                        : activeKaraokeIcon
-                      : isAvailableNow
-                        ? availableKaraokeIcon
-                        : karaokeIcon;
+                    selectedId === karaoke._id ? activeKaraokeIcon : karaokeIcon;
 
                   if (!icon) return null;
 
