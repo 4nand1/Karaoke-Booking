@@ -1,12 +1,17 @@
+"use client"
+
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import Navbar from "@/_components/client/navbar"
 import MapPreview from "@/_components/client/MapPreviewClient"
 import Footer from "@/_components/client/Footer"
 import { Button } from "@/components/ui/button"
+import { useLanguage } from "@/lib/language"
 import MapClient from "./MapClient"
 
 export default function MapPage() {
+  const { language } = useLanguage()
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -15,7 +20,7 @@ export default function MapPage() {
           <Button asChild variant="outline" className="rounded-xl">
             <Link href="/">
               <ArrowLeft className="h-4 w-4" />
-              Back
+              {language === "MN" ? "Буцах" : "Back"}
             </Link>
           </Button>
         </div>

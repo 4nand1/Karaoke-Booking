@@ -36,7 +36,7 @@ const KaraokeCard = ({
         viewport={{ once: true }}
         transition={{ duration: 0.5, delay: index * 0.1 }}
         className="card-hover group cursor-pointer overflow-hidden rounded-2xl bg-card shadow-md"
-        onClick={() => router.push(`/karaoke/${id}`)}
+        onClick={() => router.push(`/book/${id}`)}
       >
         <div className="relative h-48 overflow-hidden">
           <img
