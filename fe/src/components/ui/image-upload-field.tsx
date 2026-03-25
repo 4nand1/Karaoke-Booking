@@ -70,6 +70,17 @@ export function ImageUploadField({
       }
 
       const uploadedImages = await imageFilesToDataUrls(nextFiles)
+      const totalPayloadSize = uploadedImages.reduce(
+        (sum, image) => sum + image.length,
+        0
+      )
+
+      if (totalPayloadSize > 3_800_000) {
+        throw new Error(
+          "Selected images are too large for deployment upload limits. Please upload fewer or smaller images."
+        )
+      }
+
       const nextImages = multiple
         ? [...value, ...uploadedImages].slice(0, maxFiles)
         : uploadedImages.slice(0, 1)
@@ -125,8 +136,8 @@ export function ImageUploadField({
       <p className={tone.hint}>
         {helperText ||
           (multiple
-            ? `You can add up to ${maxFiles} images.`
-            : "Pick one image from your device.")}
+            ? `You can add up to ${maxFiles} images. Smaller compressed images work best for deployment.`
+            : "Pick one image from your device. Smaller compressed images work best for deployment.")}
       </p>
 
       {error ? <p className={tone.error}>{error}</p> : null}
