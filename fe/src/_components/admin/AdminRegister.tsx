@@ -355,16 +355,9 @@ export default function KaraokeRegisterForm({
 
       const karaoke = data?.karaoke as RegisteredKaraoke | undefined
 
-      setMessage(
-        currentKaraoke
-          ? "Karaoke details updated successfully."
-          : "Karaoke registration submitted successfully."
-      )
-
-      if (!currentKaraoke) {
-        setFormData(initialForm)
-        setCurrentStep(0)
-      }
+      setMessage("Karaoke registration submitted successfully.")
+      setFormData(initialForm)
+      setCurrentStep(0)
 
       if (karaoke) {
         onRegistered?.(karaoke)
