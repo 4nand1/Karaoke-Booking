@@ -2,7 +2,8 @@
 
 export function createKaraokeIcon(
   L: typeof import("leaflet"),
-  isActive = false
+  isActive = false,
+  color = "#ff2f92"
 ) {
   const size = isActive ? 34 : 28;
 
@@ -14,7 +15,7 @@ export function createKaraokeIcon(
           position: relative;
           width: ${size}px;
           height: ${size}px;
-          background: #ff2f92;
+          background: ${color};
           border-radius: ${size}px ${size}px ${size}px 0;
           transform: rotate(-45deg);
           box-shadow: 0 10px 24px rgba(0,0,0,0.28);

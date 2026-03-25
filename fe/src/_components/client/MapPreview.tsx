@@ -5,10 +5,10 @@ import { motion } from "framer-motion";
 import type { LatLngExpression, DivIcon } from "leaflet";
 import { Marker, Popup } from "react-leaflet";
 import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Map, MapTileLayer, MapZoomControl } from "@/components/ui/map";
 import { apiBaseUrl, apiRootUrl } from "@/lib/api-url";
 import MapAutoFit from "./MapAutoFit";
-import KaraokeMapPopup from "./map-preview/KaraokeMapPopup";
 import NearbyKaraokeCard from "./map-preview/NearbyKaraokeCard";
 import { createKaraokeIcon, createUserIcon } from "./map-preview/icons";
 import type {
@@ -17,15 +17,21 @@ import type {
   Order,
   UserLocation,
 } from "./map-preview/types";
-import { getFitPoints, getNearbyKaraokes } from "./map-preview/utils";
+import {
+  getFitPoints,
+  getNearbyKaraokes,
+  isOpenAndAvailableNow,
+} from "./map-preview/utils";
 
 export default function MapPreview() {
+  const ITEMS_PER_PAGE = 4;
   const router = useRouter();
   const [karaokes, setKaraokes] = useState<Karaoke[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [leafletLib, setLeafletLib] = useState<typeof import("leaflet") | null>(null);
 
   useEffect(() => {
@@ -99,6 +105,39 @@ export default function MapPreview() {
     }
   }, [nearbyKaraokes, selectedId]);
 
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(nearbyKaraokes.length / ITEMS_PER_PAGE));
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [nearbyKaraokes.length]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const selectedIndex = nearbyKaraokes.findIndex(
+      (karaoke) => karaoke._id === selectedId
+    );
+
+    if (selectedIndex === -1) return;
+
+    const nextPage = Math.floor(selectedIndex / ITEMS_PER_PAGE) + 1;
+    setCurrentPage((prev) => (prev === nextPage ? prev : nextPage));
+  }, [ITEMS_PER_PAGE, nearbyKaraokes, selectedId]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(nearbyKaraokes.length / ITEMS_PER_PAGE)),
+    [ITEMS_PER_PAGE, nearbyKaraokes.length]
+  );
+
+  const paginatedKaraokes = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return nearbyKaraokes.slice(start, start + ITEMS_PER_PAGE);
+  }, [ITEMS_PER_PAGE, currentPage, nearbyKaraokes]);
+
+  const visibleStart = nearbyKaraokes.length
+    ? (currentPage - 1) * ITEMS_PER_PAGE + 1
+    : 0;
+  const visibleEnd = Math.min(currentPage * ITEMS_PER_PAGE, nearbyKaraokes.length);
+
   const mapCenter = useMemo<LatLngExpression>(() => {
     const selected = nearbyKaraokes.find((karaoke) => karaoke._id === selectedId);
 
@@ -129,9 +168,19 @@ export default function MapPreview() {
     return createKaraokeIcon(leafletLib, false);
   }, [leafletLib]);
 
+  const availableKaraokeIcon = useMemo<DivIcon | undefined>(() => {
+    if (!leafletLib) return undefined;
+    return createKaraokeIcon(leafletLib, false, "#22c55e");
+  }, [leafletLib]);
+
   const activeKaraokeIcon = useMemo<DivIcon | undefined>(() => {
     if (!leafletLib) return undefined;
     return createKaraokeIcon(leafletLib, true);
+  }, [leafletLib]);
+
+  const activeAvailableKaraokeIcon = useMemo<DivIcon | undefined>(() => {
+    if (!leafletLib) return undefined;
+    return createKaraokeIcon(leafletLib, true, "#22c55e");
   }, [leafletLib]);
 
   const userIcon = useMemo<DivIcon | undefined>(() => {
@@ -180,18 +229,99 @@ export default function MapPreview() {
                 No karaoke venues found.
               </div>
             ) : (
-              nearbyKaraokes.map((karaoke) => {
-                return (
-                  <NearbyKaraokeCard
-                    key={karaoke._id}
-                    karaoke={karaoke}
-                    orders={orders}
-                    isSelected={selectedId === karaoke._id}
-                    onSelect={() => setSelectedId(karaoke._id)}
-                    onBookNow={() => openBookingFor(karaoke._id)}
-                  />
-                );
-              })
+              <>
+                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3 text-xs text-muted-foreground shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>
+                      Showing <span className="font-semibold text-foreground">{visibleStart}</span>
+                      {" "}-{" "}
+                      <span className="font-semibold text-foreground">{visibleEnd}</span>
+                      {" "}of{" "}
+                      <span className="font-semibold text-foreground">{nearbyKaraokes.length}</span>
+                    </span>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary">
+                      Page {currentPage}/{totalPages}
+                    </span>
+                  </div>
+                  {totalPages > 1 ? (
+                    <p className="mt-2">
+                      More nearby spots are available. Use the pagination below to browse them.
+                    </p>
+                  ) : null}
+                </div>
+
+                {paginatedKaraokes.map((karaoke) => {
+                  return (
+                    <NearbyKaraokeCard
+                      key={karaoke._id}
+                      karaoke={karaoke}
+                      orders={orders}
+                      isSelected={selectedId === karaoke._id}
+                      onSelect={() => {
+                        setSelectedId(karaoke._id);
+                        openBookingFor(karaoke._id);
+                      }}
+                      onBookNow={() => openBookingFor(karaoke._id)}
+                    />
+                  );
+                })}
+
+                {totalPages > 1 ? (
+                  <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/70 p-3 shadow-sm">
+                    <div className="flex items-center justify-center gap-2">
+                      {Array.from({ length: totalPages }, (_, index) => {
+                        const page = index + 1;
+
+                        return (
+                          <button
+                            key={page}
+                            type="button"
+                            onClick={() => setCurrentPage(page)}
+                            className={[
+                              "h-2.5 rounded-full transition-all",
+                              page === currentPage
+                                ? "w-8 bg-primary"
+                                : "w-2.5 bg-primary/25 hover:bg-primary/50",
+                            ].join(" ")}
+                            aria-label={`Go to page ${page}`}
+                            aria-current={page === currentPage ? "page" : undefined}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Prev
+                      </button>
+
+                      <span className="text-xs text-muted-foreground">
+                        {currentPage < totalPages
+                          ? `${totalPages - currentPage} more page${totalPages - currentPage > 1 ? "s" : ""}`
+                          : "You are on the last page"}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                        }
+                        disabled={currentPage === totalPages}
+                        className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
 
@@ -230,10 +360,15 @@ export default function MapPreview() {
                     return null;
                   }
 
+                  const isAvailableNow = isOpenAndAvailableNow(karaoke, orders);
                   const icon =
                     selectedId === karaoke._id
-                      ? activeKaraokeIcon
-                      : karaokeIcon;
+                      ? isAvailableNow
+                        ? activeAvailableKaraokeIcon
+                        : activeKaraokeIcon
+                      : isAvailableNow
+                        ? availableKaraokeIcon
+                        : karaokeIcon;
 
                   if (!icon) return null;
 
@@ -243,17 +378,12 @@ export default function MapPreview() {
                       position={[karaoke.latitude, karaoke.longitude]}
                       icon={icon}
                       eventHandlers={{
-                        click: () => setSelectedId(karaoke._id),
+                        click: () => {
+                          setSelectedId(karaoke._id);
+                          openBookingFor(karaoke._id);
+                        },
                       }}
-                    >
-                      <Popup>
-                        <KaraokeMapPopup
-                          karaoke={karaoke}
-                          orders={orders}
-                          onBookNow={() => openBookingFor(karaoke._id)}
-                        />
-                      </Popup>
-                    </Marker>
+                    />
                   );
                 })}
               </Map>

@@ -6,6 +6,7 @@ import {
   getBookingStatus,
   getIsOpenNow,
   getKaraokeImage,
+  isOpenAndAvailableNow,
 } from "./utils";
 
 type NearbyKaraokeCardProps = {
@@ -26,11 +27,15 @@ export default function NearbyKaraokeCard({
   const isOpenNow = getIsOpenNow(karaoke.openingTime, karaoke.closingTime);
   const imageSrc = getKaraokeImage(karaoke);
   const bookingStatus = getBookingStatus(karaoke, orders, isOpenNow);
+  const isHighlighted = isOpenAndAvailableNow(karaoke, orders);
 
   return (
     <div
       className={[
         "w-full rounded-2xl border bg-card p-4 text-left shadow-sm transition-all duration-200",
+        isHighlighted
+          ? "border-emerald-400/40 shadow-[0_0_0_1px_rgba(16,185,129,0.12),0_16px_36px_rgba(16,185,129,0.12)]"
+          : "",
         isSelected
           ? "border-primary ring-1 ring-primary/30"
           : "border-border hover:-translate-y-0.5 hover:shadow-md",
@@ -49,9 +54,17 @@ export default function NearbyKaraokeCard({
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-              <h3 className="font-semibold text-card-foreground">
-                {karaoke.name}
-              </h3>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-card-foreground">
+                  {karaoke.name}
+                </h3>
+                {isHighlighted ? (
+                  <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-2 py-1 text-[11px] font-semibold text-emerald-600">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Recommended now
+                  </div>
+                ) : null}
+              </div>
               <span
                 className={[
                   "w-fit shrink-0 rounded-full px-2 py-1 text-xs font-semibold",
