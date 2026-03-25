@@ -50,6 +50,21 @@ export function createApp() {
   const allowedOrigins = getAllowedOrigins()
   const { publishableKey, secretKey } = getClerkConfig()
 
+  app.get("/", (_req, res) => {
+    res.status(200).json({
+      ok: true,
+      service: "karaoke-booking-backend",
+      message: "Backend is running",
+    })
+  })
+
+  app.get("/health", (_req, res) => {
+    res.status(200).json({
+      ok: true,
+      service: "karaoke-booking-backend",
+    })
+  })
+
   app.use(
     cors({
       origin(origin, callback) {
@@ -105,4 +120,3 @@ export function createApp() {
 
   return app
 }
-
