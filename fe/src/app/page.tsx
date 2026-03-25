@@ -60,6 +60,11 @@ type KaraokeCardViewModel = {
   }>
 }
 
+type ReviewRecord = {
+  karaokeId?: string
+  rating?: number
+}
+
 const FALLBACK_IMAGE = "/karaoke-card-1.jpg"
 
 function toMinutes(value?: string) {
@@ -171,6 +176,7 @@ const Index = () => {
     roomSize: "all",
   })
   const [karaokes, setKaraokes] = useState<KaraokeListing[]>([])
+  const [reviews, setReviews] = useState<ReviewRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -180,16 +186,32 @@ const Index = () => {
         setLoading(true)
         setError("")
 
-        const response = await fetch(`${apiRootUrl}/karaoke`, {
-          cache: "no-store",
-        })
+        const [karaokeResponse, reviewResponse] = await Promise.all([
+          fetch(`${apiRootUrl}/karaoke`, {
+            cache: "no-store",
+          }),
+          fetch(`${apiRootUrl}/api/reviews`, {
+            cache: "no-store",
+          }),
+        ])
 
-        if (!response.ok) {
-          throw new Error(`Failed to load karaokes: ${response.status}`)
+        if (!karaokeResponse.ok) {
+          throw new Error(`Failed to load karaokes: ${karaokeResponse.status}`)
         }
 
-        const data = (await response.json()) as { karaokes?: KaraokeListing[] }
-        setKaraokes(Array.isArray(data.karaokes) ? data.karaokes : [])
+        const karaokeData = (await karaokeResponse.json()) as {
+          karaokes?: KaraokeListing[]
+        }
+        setKaraokes(Array.isArray(karaokeData.karaokes) ? karaokeData.karaokes : [])
+
+        if (reviewResponse.ok) {
+          const reviewData = (await reviewResponse.json()) as {
+            data?: ReviewRecord[]
+          }
+          setReviews(Array.isArray(reviewData.data) ? reviewData.data : [])
+        } else {
+          setReviews([])
+        }
       } catch (err) {
         console.error("Failed to fetch karaokes:", err)
         setError("Failed to load karaoke listings")
@@ -201,9 +223,43 @@ const Index = () => {
     fetchKaraokes()
   }, [])
 
+  const ratingByKaraokeId = useMemo(() => {
+    const totals = new Map<string, { sum: number; count: number }>()
+
+    reviews.forEach((review) => {
+      if (
+        typeof review.karaokeId !== "string" ||
+        typeof review.rating !== "number" ||
+        review.rating < 1 ||
+        review.rating > 5
+      ) {
+        return
+      }
+
+      const current = totals.get(review.karaokeId) ?? { sum: 0, count: 0 }
+      current.sum += review.rating
+      current.count += 1
+      totals.set(review.karaokeId, current)
+    })
+
+    return totals
+  }, [reviews])
+
   const mappedKaraokes = useMemo(
-    () => karaokes.map(mapKaraokeToCard),
-    [karaokes]
+    () =>
+      karaokes.map((karaoke) => {
+        const reviewSummary = ratingByKaraokeId.get(karaoke._id)
+        const computedRating =
+          reviewSummary && reviewSummary.count > 0
+            ? Number((reviewSummary.sum / reviewSummary.count).toFixed(1))
+            : karaoke.rating ?? null
+
+        return mapKaraokeToCard({
+          ...karaoke,
+          rating: computedRating,
+        })
+      }),
+    [karaokes, ratingByKaraokeId]
   )
 
   const filteredSpots = useMemo(() => {
