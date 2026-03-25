@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import type { AxiosError } from "axios"
 import { api } from "@/lib/axios"
 
@@ -21,6 +21,7 @@ const STORAGE_KEY = "karaoke_app_selected_role"
 
 export default function PostAuthPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { getToken, isLoaded } = useAuth()
   const { isSignedIn } = useUser()
   const [error, setError] = useState("")
@@ -42,20 +43,15 @@ export default function PostAuthPage() {
           return
         }
 
-        const params =
-          typeof window !== "undefined"
-            ? new URLSearchParams(window.location.search)
-            : null
-
         const redirectUrlFromQuery =
-          params?.get("redirect_url") ?? params?.get("redirectUrl")
+          searchParams.get("redirect_url") ?? searchParams.get("redirectUrl")
 
         const safeRedirectUrl =
           redirectUrlFromQuery && redirectUrlFromQuery.startsWith("/")
             ? redirectUrlFromQuery
             : null
 
-        const queryRole = params?.get("role")
+        const queryRole = searchParams.get("role")
 
         const savedRole =
           typeof window !== "undefined"
@@ -86,7 +82,8 @@ export default function PostAuthPage() {
 
         const shouldSyncRole =
           !existingRole ||
-          (selectedRole === "admin" && existingRole !== "karaoke_owner")
+          (selectedRole === "admin" && existingRole !== "karaoke_owner") ||
+          (selectedRole === "user" && existingRole !== "customer")
 
         if (shouldSyncRole) {
           await api.post(
@@ -137,7 +134,7 @@ export default function PostAuthPage() {
     }
 
     run()
-  }, [getToken, isLoaded, isSignedIn, router])
+  }, [getToken, isLoaded, isSignedIn, router, searchParams])
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6 text-center">

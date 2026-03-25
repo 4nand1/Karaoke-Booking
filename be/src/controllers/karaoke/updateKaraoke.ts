@@ -6,6 +6,22 @@ export const updateKaraoke: RequestHandler = async (req, res) => {
     const { id } = req.params
     const body = { ...req.body }
 
+    if (body.karaokeName && !body.name) {
+      body.name = body.karaokeName
+      delete body.karaokeName
+    }
+
+    if (body.phoneNumber && !body.phone) {
+      body.phone = body.phoneNumber
+      delete body.phoneNumber
+    }
+
+    if (!body.openingHours && (body.openingTime || body.closingTime)) {
+      body.openingHours = [body.openingTime, body.closingTime]
+        .filter(Boolean)
+        .join(" - ")
+    }
+
     if (Array.isArray(body.images)) {
       body.image = body.images[0] ?? null
     }

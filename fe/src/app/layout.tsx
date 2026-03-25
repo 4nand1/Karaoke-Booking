@@ -15,7 +15,26 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function () {
+                  try {
+                    var savedTheme = localStorage.getItem("theme");
+                    var isDark =
+                      savedTheme === "dark" ||
+                      (savedTheme !== "light" &&
+                        window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+                    document.documentElement.classList.toggle("dark", isDark);
+                  } catch (error) {}
+                })();
+              `,
+            }}
+          />
+        </head>
         <body>
           <LanguageProvider>
             {children}

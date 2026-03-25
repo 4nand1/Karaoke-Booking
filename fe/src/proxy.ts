@@ -3,7 +3,6 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 const isSignedInRoute = createRouteMatcher([
   "/profile(.*)",
   "/my-bookings(.*)",
-  "/register-karaoke(.*)",
   "/admin(.*)",
   "/admin/dashboard(.*)",
 ])

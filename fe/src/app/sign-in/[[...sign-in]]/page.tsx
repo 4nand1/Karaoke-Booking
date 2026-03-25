@@ -50,9 +50,7 @@ export default function SignInPage() {
 
   const authParams = new URLSearchParams()
 
-  if (selectedRole === "admin") {
-    authParams.set("role", "admin")
-  }
+  authParams.set("role", selectedRole)
 
   if (safeRedirectUrl) {
     authParams.set("redirect_url", safeRedirectUrl)

@@ -189,6 +189,42 @@ router.post("/me/role", async (req, res) => {
 
     const currentRole = normalizeRole((profile as any).role)
     const currentOwnerStatus = ((profile as any).ownerStatus ?? null) as OwnerStatus
+    const existingKaraoke = await KaraokeModel.findOne({
+      ownerClerkUserId: userId,
+    }).lean()
+
+    if (requestedRole === "customer" && currentRole !== "customer") {
+      if (existingKaraoke) {
+        await syncClerkMetadata(userId, currentRole, currentOwnerStatus)
+
+        return res.status(409).json({
+          message:
+            "This account already owns a karaoke and cannot be switched to customer.",
+          profile,
+          canRegisterKaraoke: true,
+        })
+      }
+
+      profile = await UserProfile.findOneAndUpdate(
+        { clerkUserId: userId },
+        {
+          role: "customer",
+          ownerStatus: null,
+          karaokeId: null,
+          email: getPrimaryEmail(clerkUser),
+          fullName: getFullName(clerkUser),
+        },
+        { new: true }
+      )
+
+      await syncClerkMetadata(userId, "customer", null)
+
+      return res.json({
+        message: "Role updated successfully",
+        profile,
+        canRegisterKaraoke: false,
+      })
+    }
 
     if (requestedRole === "karaoke_owner" && currentRole !== "karaoke_owner") {
       profile = await UserProfile.findOneAndUpdate(

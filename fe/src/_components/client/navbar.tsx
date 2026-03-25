@@ -107,6 +107,7 @@ function NavbarContent({
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "")
   const [searchListings, setSearchListings] = useState<SearchListing[]>([])
   const [profileMetadata, setProfileMetadata] = useState<PublicMetadata | null>(null)
+  const [isProfileResolved, setIsProfileResolved] = useState(false)
   const hasHydrated = useRef(false)
 
   const copy = useMemo(
@@ -201,6 +202,7 @@ function NavbarContent({
 
       if (!isSignedIn) {
         setProfileMetadata(null)
+        setIsProfileResolved(true)
         return
       }
 
@@ -209,6 +211,7 @@ function NavbarContent({
 
         if (!token) {
           setProfileMetadata(null)
+          setIsProfileResolved(true)
           return
         }
 
@@ -224,9 +227,12 @@ function NavbarContent({
         })
       } catch {
         setProfileMetadata(null)
+      } finally {
+        setIsProfileResolved(true)
       }
     }
 
+    setIsProfileResolved(false)
     void syncProfile()
   }, [getToken, isAuthLoaded, isSignedIn, user?.id])
 
@@ -240,7 +246,7 @@ function NavbarContent({
     effectiveMetadata.role === "admin" ||
     effectiveMetadata.role === "karaoke_owner" ||
     isApprovedOwner
-  const isRegularUser = isSignedIn && !isAdmin
+  const isRegularUser = isSignedIn && isProfileResolved && !isAdmin
 
   useEffect(() => {
     hasHydrated.current = true

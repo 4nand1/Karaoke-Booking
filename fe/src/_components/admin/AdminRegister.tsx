@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react"
 import { apiBaseUrl } from "@/lib/api-url"
 import { ImageUploadField } from "@/components/ui/image-upload-field"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 
@@ -17,6 +16,8 @@ type FormDataType = {
   email: string
   address: string
   city: string
+  latitude: string
+  longitude: string
   description: string
   openingHours: string
   openingTime: string
@@ -48,6 +49,8 @@ export type RegisteredKaraoke = {
   amenities?: string[]
   images?: string[]
   rulesPolicies?: string
+  latitude?: number | null
+  longitude?: number | null
   approvalStatus?: "pending" | "approved" | "rejected" | "draft"
   rooms?: Array<{
     _id: string
@@ -76,6 +79,8 @@ const initialForm: FormDataType = {
   email: "",
   address: "",
   city: "",
+  latitude: "",
+  longitude: "",
   description: "",
   openingHours: "",
   openingTime: "",
@@ -90,47 +95,49 @@ const initialForm: FormDataType = {
 
 type KaraokeRegisterFormProps = {
   embedded?: boolean
+  currentKaraoke?: RegisteredKaraoke | null
   onRegistered?: (karaoke: RegisteredKaraoke) => void
 }
-
-type FormKey = keyof FormDataType
 
 const STEPS: Array<{
   id: string
   title: string
   description: string
-  fields: FormKey[]
 }> = [
   {
     id: "business",
     title: "Business details",
     description: "Name, owner, and contact details.",
-    fields: ["karaokeName", "ownerFullName", "email", "phoneNumber"],
   },
   {
     id: "location",
     title: "Location and hours",
-    description: "Address, city, and operating hours.",
-    fields: ["city", "address", "openingTime", "closingTime", "openingHours"],
+    description: "Address, city, coordinates, and operating hours.",
   },
   {
     id: "experience",
     title: "Experience and policies",
     description: "Description, pricing hints, amenities, photos, and policies.",
-    fields: [
-      "description",
-      "roomTypes",
-      "pricePerHour",
-      "capacity",
-      "amenities",
-      "images",
-      "rulesPolicies",
-    ],
   },
 ]
 
+function formatNumberInput(value: string) {
+  const digits = value.replace(/\D/g, "")
+
+  if (!digits) return ""
+
+  return Number(digits).toLocaleString()
+}
+
+function formatOpeningHours(value?: string) {
+  if (!value) return ""
+
+  return value.replace(/\s*-\s*/g, " - ").replace(/\s+/g, " ").trim()
+}
+
 export default function KaraokeRegisterForm({
   embedded = false,
+  currentKaraoke = null,
   onRegistered,
 }: KaraokeRegisterFormProps) {
   const router = useRouter()
@@ -142,6 +149,44 @@ export default function KaraokeRegisterForm({
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
   const [currentStep, setCurrentStep] = useState(0)
+
+  useEffect(() => {
+    if (!currentKaraoke) {
+      setFormData((prev) => ({
+        ...initialForm,
+        ownerFullName: prev.ownerFullName || user?.fullName || "",
+        email: prev.email || user?.primaryEmailAddress?.emailAddress || "",
+      }))
+      return
+    }
+
+    setFormData({
+      karaokeName: currentKaraoke.name || "",
+      ownerFullName: currentKaraoke.ownerFullName || user?.fullName || "",
+      phoneNumber: currentKaraoke.phone || "",
+      email: currentKaraoke.email || user?.primaryEmailAddress?.emailAddress || "",
+      address: currentKaraoke.address || "",
+      city: currentKaraoke.city || "",
+      latitude:
+        currentKaraoke.latitude != null ? String(currentKaraoke.latitude) : "",
+      longitude:
+        currentKaraoke.longitude != null ? String(currentKaraoke.longitude) : "",
+      description: currentKaraoke.description || "",
+      openingHours: formatOpeningHours(currentKaraoke.openingHours),
+      openingTime: currentKaraoke.openingTime || "",
+      closingTime: currentKaraoke.closingTime || "",
+      roomTypes: currentKaraoke.roomTypes?.join(", ") || "",
+      pricePerHour:
+        currentKaraoke.pricePerHour != null
+          ? currentKaraoke.pricePerHour.toLocaleString()
+          : "",
+      capacity:
+        currentKaraoke.capacity != null ? String(currentKaraoke.capacity) : "",
+      amenities: currentKaraoke.amenities?.join(", ") || "",
+      images: currentKaraoke.images || [],
+      rulesPolicies: currentKaraoke.rulesPolicies || "",
+    })
+  }, [currentKaraoke, user])
 
   useEffect(() => {
     setFormData((prev) => ({
@@ -239,49 +284,67 @@ export default function KaraokeRegisterForm({
 
     try {
       if (!isSignedIn) {
-        router.push("/sign-in?redirect_url=/register-karaoke")
+        router.push("/sign-in?role=admin&redirect_url=/admin/dashboard")
         return
       }
 
       const token = await getToken()
 
       if (!token) {
-        router.push("/sign-in?redirect_url=/register-karaoke")
+        router.push("/sign-in?role=admin&redirect_url=/admin/dashboard")
         return
       }
 
-      const res = await fetch(`${apiBaseUrl}/onboarding/karaoke`, {
-        method: "POST",
+      const normalizedPayload = {
+        ownerFullName: formData.ownerFullName || user?.fullName || "",
+        phone: formData.phoneNumber,
+        email: formData.email || user?.primaryEmailAddress?.emailAddress || "",
+        address: formData.address,
+        city: formData.city,
+        latitude: formData.latitude ? Number(formData.latitude) : null,
+        longitude: formData.longitude ? Number(formData.longitude) : null,
+        description: formData.description,
+        openingHours: formatOpeningHours(formData.openingHours),
+        openingTime: formData.openingTime,
+        closingTime: formData.closingTime,
+        roomTypes: formData.roomTypes
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        pricePerHour: formData.pricePerHour
+          ? Number(formData.pricePerHour.replace(/,/g, ""))
+          : null,
+        capacity: formData.capacity ? Number(formData.capacity) : null,
+        amenities: formData.amenities
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        images: formData.images,
+        rulesPolicies: formData.rulesPolicies,
+      }
+
+      const payload = currentKaraoke?._id
+        ? {
+            ...normalizedPayload,
+            name: formData.karaokeName,
+          }
+        : {
+            ...normalizedPayload,
+            karaokeName: formData.karaokeName,
+            phoneNumber: formData.phoneNumber,
+          }
+
+      const endpoint = currentKaraoke?._id
+        ? `${apiBaseUrl.replace(/\/api$/, "")}/karaoke/${currentKaraoke._id}`
+        : `${apiBaseUrl}/onboarding/karaoke`
+
+      const res = await fetch(endpoint, {
+        method: currentKaraoke?._id ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          karaokeName: formData.karaokeName,
-          ownerFullName: formData.ownerFullName || user?.fullName || "",
-          phoneNumber: formData.phoneNumber,
-          email: formData.email || user?.primaryEmailAddress?.emailAddress || "",
-          address: formData.address,
-          city: formData.city,
-          description: formData.description,
-          openingHours: formData.openingHours,
-          openingTime: formData.openingTime,
-          closingTime: formData.closingTime,
-          roomTypes: formData.roomTypes
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean),
-          pricePerHour: formData.pricePerHour
-            ? Number(formData.pricePerHour)
-            : null,
-          capacity: formData.capacity ? Number(formData.capacity) : null,
-          amenities: formData.amenities
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean),
-          images: formData.images,
-          rulesPolicies: formData.rulesPolicies,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await res.json()
@@ -292,9 +355,16 @@ export default function KaraokeRegisterForm({
 
       const karaoke = data?.karaoke as RegisteredKaraoke | undefined
 
-      setMessage("Karaoke registration submitted successfully.")
-      setFormData(initialForm)
-      setCurrentStep(0)
+      setMessage(
+        currentKaraoke
+          ? "Karaoke details updated successfully."
+          : "Karaoke registration submitted successfully."
+      )
+
+      if (!currentKaraoke) {
+        setFormData(initialForm)
+        setCurrentStep(0)
+      }
 
       if (karaoke) {
         onRegistered?.(karaoke)
@@ -320,9 +390,6 @@ export default function KaraokeRegisterForm({
     <div className={sectionShell}>
       <div className="grid gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
         <div className="border-b border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950 lg:border-b-0 lg:border-r">
-          <Badge variant="outline" className="mb-4">
-            Step 1
-          </Badge>
           <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">
             Register Karaoke
           </h2>
@@ -488,6 +555,32 @@ export default function KaraokeRegisterForm({
                 </div>
 
                 <div>
+                  <label className={labelClassName}>Latitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    name="latitude"
+                    placeholder="47.9184"
+                    value={formData.latitude}
+                    onChange={handleChange}
+                    className={inputClassName}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClassName}>Longitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    name="longitude"
+                    placeholder="106.9177"
+                    value={formData.longitude}
+                    onChange={handleChange}
+                    className={inputClassName}
+                  />
+                </div>
+
+                <div>
                   <label className={labelClassName}>Closing time</label>
                   <input
                     type="time"
@@ -543,11 +636,17 @@ export default function KaraokeRegisterForm({
                 <div>
                   <label className={labelClassName}>Base price per hour</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     name="pricePerHour"
                     placeholder="50000"
                     value={formData.pricePerHour}
-                    onChange={handleChange}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        pricePerHour: formatNumberInput(e.target.value),
+                      }))
+                    }
                     className={inputClassName}
                   />
                 </div>
@@ -642,7 +741,13 @@ export default function KaraokeRegisterForm({
                   disabled={loading}
                   className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
                 >
-                  {loading ? "Saving..." : embedded ? "Save karaoke" : "Register karaoke"}
+                  {loading
+                    ? "Saving..."
+                    : currentKaraoke
+                      ? "Update karaoke"
+                      : embedded
+                        ? "Save karaoke"
+                        : "Register karaoke"}
                 </Button>
               )}
             </div>

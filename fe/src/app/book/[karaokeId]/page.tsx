@@ -2,9 +2,10 @@
 
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
+  ChevronLeft,
   Clock3,
   MapPin,
   Phone,
@@ -80,6 +81,7 @@ const formatMinutesToTime = (minutes: number) => {
 
 export default function BookingPage() {
   const params = useParams<{ karaokeId: string }>();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const karaokeId = params.karaokeId;
 
@@ -99,6 +101,15 @@ export default function BookingPage() {
     type: "error" | "info";
     message: string;
   } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    customerName: boolean;
+    customerPhone: boolean;
+    selectedSlots: boolean;
+  }>({
+    customerName: false,
+    customerPhone: false,
+    selectedSlots: false,
+  });
 
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -202,6 +213,18 @@ export default function BookingPage() {
     return null;
   };
 
+  const validateBookingForm = () => {
+    const nextErrors = {
+      customerName: !formData.customerName.trim(),
+      customerPhone: !formData.customerPhone.trim(),
+      selectedSlots: selectedSlots.length === 0,
+    };
+
+    setFieldErrors(nextErrors);
+
+    return !Object.values(nextErrors).some(Boolean);
+  };
+
   const toggleSlot = (slot: string) => {
     setSelectedSlots((prev) =>
       prev.includes(slot) ? prev.filter((item) => item !== slot) : [...prev, slot]
@@ -225,10 +248,14 @@ export default function BookingPage() {
     selectedMenuItems.find(m => m.item._id === itemId)?.quantity ?? 0;
 
   const handleStripeCheckout = async () => {
+    const isValid = validateBookingForm();
     const validationMessage = getValidationMessage();
 
-    if (validationMessage) {
-      setFeedback({ type: "error", message: validationMessage });
+    if (!isValid || validationMessage) {
+      setFeedback({
+        type: "error",
+        message: validationMessage || "Please fill in the required booking details.",
+      });
       return;
     }
 
@@ -295,6 +322,23 @@ export default function BookingPage() {
 
   return (
     <main className="container mx-auto px-6 py-10">
+      <Button
+        type="button"
+        variant="outline"
+        className="mb-6 rounded-xl"
+        onClick={() => {
+          if (typeof window !== "undefined" && window.history.length > 1) {
+            router.back();
+            return;
+          }
+
+          router.push("/");
+        }}
+      >
+        <ChevronLeft className="mr-2 h-4 w-4" />
+        Back to main page
+      </Button>
+
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
 
         {/* Left */}
@@ -530,20 +574,46 @@ export default function BookingPage() {
               <span className="mb-2 block text-sm font-medium">Your name</span>
               <input
                 value={formData.customerName}
-                onChange={(e) => setFormData((prev) => ({ ...prev, customerName: e.target.value }))}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, customerName: e.target.value }));
+                  setFieldErrors((prev) => ({ ...prev, customerName: false }));
+                }}
                 placeholder="Enter your name"
-                className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                className={[
+                  "w-full rounded-xl border bg-background px-4 py-3 outline-none focus:border-primary",
+                  fieldErrors.customerName
+                    ? "border-red-500 bg-red-500/5 focus:border-red-500"
+                    : "border-border",
+                ].join(" ")}
               />
+              {fieldErrors.customerName && (
+                <span className="mt-2 block text-sm text-red-400">
+                  Please enter your name.
+                </span>
+              )}
             </label>
 
             <label className="block">
               <span className="mb-2 block text-sm font-medium">Phone number</span>
               <input
                 value={formData.customerPhone}
-                onChange={(e) => setFormData((prev) => ({ ...prev, customerPhone: e.target.value }))}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, customerPhone: e.target.value }));
+                  setFieldErrors((prev) => ({ ...prev, customerPhone: false }));
+                }}
                 placeholder="Phone number"
-                className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                className={[
+                  "w-full rounded-xl border bg-background px-4 py-3 outline-none focus:border-primary",
+                  fieldErrors.customerPhone
+                    ? "border-red-500 bg-red-500/5 focus:border-red-500"
+                    : "border-border",
+                ].join(" ")}
               />
+              {fieldErrors.customerPhone && (
+                <span className="mt-2 block text-sm text-red-400">
+                  Please enter your phone number.
+                </span>
+              )}
             </label>
 
             {/* 7 хоногийн calendar */}
@@ -583,14 +653,24 @@ export default function BookingPage() {
                 Select one or more hours
               </div>
               {timeSlots.length ? (
-                <div className="grid grid-cols-3 gap-2">
+                <div
+                  className={[
+                    "grid grid-cols-3 gap-2 rounded-2xl border p-3 transition-colors",
+                    fieldErrors.selectedSlots
+                      ? "border-red-500 bg-red-500/5"
+                      : "border-transparent",
+                  ].join(" ")}
+                >
                   {timeSlots.map((slot) => {
                     const active = selectedSlots.includes(slot);
                     return (
                       <button
                         key={slot}
                         type="button"
-                        onClick={() => toggleSlot(slot)}
+                        onClick={() => {
+                          toggleSlot(slot);
+                          setFieldErrors((prev) => ({ ...prev, selectedSlots: false }));
+                        }}
                         className={["rounded-xl border px-4 py-3 text-sm font-medium transition-colors", active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"].join(" ")}
                       >
                         {slot}
@@ -602,6 +682,11 @@ export default function BookingPage() {
                 <div className="rounded-xl border border-dashed border-border bg-background px-4 py-3 text-sm text-muted-foreground">
                   Time slots are not available yet for this venue.
                 </div>
+              )}
+              {fieldErrors.selectedSlots && (
+                <p className="mt-2 text-sm text-red-400">
+                  Please select at least one time slot.
+                </p>
               )}
             </div>
 
