@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
-import { motion } from "framer-motion"
-import { Plus, Trash2, UtensilsCrossed, Edit2, X, Loader2 } from "lucide-react"
+import { Edit3, Plus, Soup, Trash2 } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
 import { ImageUploadField } from "@/components/ui/image-upload-field"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 type MenuItem = {
@@ -20,7 +20,7 @@ type MenuItem = {
 
 type Karaoke = {
   _id: string
-  rooms: any[]
+  rooms: unknown[]
   menu: MenuItem[]
   name: string
   address: string
@@ -31,24 +31,59 @@ type Karaoke = {
   closingTime: string
 }
 
-export function MenuTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: () => void }) {
+type FormState = {
+  name: string
+  category: MenuItem["category"]
+  price: string
+  description: string
+  image: string
+}
+
+const emptyForm: FormState = {
+  name: "",
+  category: "food",
+  price: "",
+  description: "",
+  image: "",
+}
+
+export function MenuTab({
+  karaoke,
+  onRefresh,
+}: {
+  karaoke: Karaoke
+  onRefresh: () => void
+}) {
   const { getToken } = useAuth()
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: "", category: "food", price: "", description: "", image: "" })
+  const [form, setForm] = useState<FormState>(emptyForm)
   const [loading, setLoading] = useState(false)
 
-  const isShowForm = adding || !!editing
+  const isFormOpen = adding || Boolean(editing)
+  const groupedMenu = useMemo(
+    () => ({
+      food: karaoke.menu.filter((item) => item.category === "food"),
+      drink: karaoke.menu.filter((item) => item.category === "drink"),
+      set: karaoke.menu.filter((item) => item.category === "set"),
+    }),
+    [karaoke.menu]
+  )
 
-  // ✅ НЭМЭХ
   async function handleAdd() {
-    if (!form.name || !form.price) return alert("Нэр болон үнийг заавал бөглөнө үү!")
+    if (!form.name || !form.price) {
+      return alert("Please enter a menu item name and price.")
+    }
+
     setLoading(true)
     try {
       const token = await getToken()
       const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/menu`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           name: form.name,
           category: form.category,
@@ -57,22 +92,21 @@ export function MenuTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: (
           image: form.image,
         }),
       })
-      if (res.ok) {
-        resetForm()
-        onRefresh()
-      } else {
+
+      if (!res.ok) {
         const errData = await res.json()
-        alert(`Алдаа: ${errData.message || "Нэмж чадсангүй"}`)
+        throw new Error(errData.message || "Failed to add menu item")
       }
-    } catch (err) {
-      console.error(err)
-      alert("Сервертэй холбогдоход алдаа гарлаа")
+
+      resetForm()
+      onRefresh()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to add menu item")
     } finally {
       setLoading(false)
     }
   }
 
-  // ✅ ЗАСАХ ЭХЛҮҮЛЭХ
   function startEdit(item: MenuItem) {
     setEditing(item._id)
     setAdding(false)
@@ -85,181 +119,262 @@ export function MenuTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: (
     })
   }
 
-  // ✅ ШИНЭЧЛЭХ
   async function handleUpdate() {
-    if (!form.name || !form.price) return alert("Нэр болон үнийг заавал бөглөнө үү!")
+    if (!editing || !form.name || !form.price) {
+      return alert("Please enter a menu item name and price.")
+    }
+
     setLoading(true)
     try {
       const token = await getToken()
-      const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/menu/${editing}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          name: form.name,
-          category: form.category,
-          price: Number(form.price),
-          description: form.description,
-          image: form.image,
-        }),
-      })
-      if (res.ok) {
-        resetForm()
-        onRefresh()
-      } else {
+      const res = await fetch(
+        `${apiRootUrl}/karaoke/${karaoke._id}/menu/${editing}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: form.name,
+            category: form.category,
+            price: Number(form.price),
+            description: form.description,
+            image: form.image,
+          }),
+        }
+      )
+
+      if (!res.ok) {
         const errData = await res.json()
-        alert(`Алдаа: ${errData.message || "Шинэчилж чадсангүй"}`)
+        throw new Error(errData.message || "Failed to update menu item")
       }
-    } catch (err) {
-      console.error(err)
-      alert("Сервертэй холбогдоход алдаа гарлаа")
+
+      resetForm()
+      onRefresh()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to update menu item")
     } finally {
       setLoading(false)
     }
   }
 
-  // ✅ УСТГАХ
   async function handleDelete(itemId: string) {
-    if (!confirm("Энэ хоолыг устгах уу?")) return
+    if (!confirm("Delete this menu item?")) return
+
     try {
       const token = await getToken()
       const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/menu/${itemId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (res.ok) {
-        onRefresh()
-      } else {
-        alert("Устгаж чадсангүй")
+
+      if (!res.ok) {
+        throw new Error("Failed to delete menu item")
       }
-    } catch (err) {
-      console.error(err)
-      alert("Сервертэй холбогдоход алдаа гарлаа")
+
+      onRefresh()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to delete menu item")
     }
   }
 
   function resetForm() {
     setAdding(false)
     setEditing(null)
-    setForm({ name: "", category: "food", price: "", description: "", image: "" })
+    setForm(emptyForm)
   }
 
-  return (
-    <div className="space-y-8">
-      <h2 className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">Меню удирдлага</h2>
+  const inputClassName =
+    "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-200"
+  const labelClassName =
+    "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
 
-      {!isShowForm ? (
+  return (
+    <div className="space-y-6 text-slate-950 dark:text-slate-50">
+      <div className="grid gap-4 md:grid-cols-3">
+        {(["food", "drink", "set"] as const).map((category) => (
+          <div
+            key={category}
+            className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950"
+          >
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+              {category}
+            </p>
+            <p className="mt-3 text-3xl font-semibold">
+              {groupedMenu[category].length}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {!isFormOpen ? (
         <>
-          {["food", "drink", "set"].map((cat) => {
-            const items = (karaoke.menu || []).filter((m) => m.category === cat)
-            if (items.length === 0) return null
-            return (
-              <div key={cat} className="space-y-4 mb-8">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-purple-500/60 flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-purple-500" /> {cat}
-                </h3>
-                <div className="grid grid-cols-1 gap-3">
-                  {items.map((item) => (
-                    <div key={item._id} className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.02] px-6 py-4 hover:border-white/10 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">
-                          {item.image ? (
-                            <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                          ) : (
-                            <UtensilsCrossed size={18} className="text-white/20" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-white/90">{item.name}</p>
-                          <p className="text-[10px] text-white/40 font-medium">
-                            ₮{item.price.toLocaleString()} {item.description && `· ${item.description}`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <button onClick={() => startEdit(item)} className="p-2 text-white/20 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-all">
-                          <Edit2 size={16} />
-                        </button>
-                        <button onClick={() => handleDelete(item._id)} className="p-2 text-white/20 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+          <div className="grid gap-5 lg:grid-cols-3">
+            {(["food", "drink", "set"] as const).map((category) => (
+              <div
+                key={category}
+                className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              >
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold capitalize">{category}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {groupedMenu[category].length} items
+                    </p>
+                  </div>
+                  <Badge variant="outline">{category}</Badge>
+                </div>
+
+                <div className="space-y-3">
+                  {groupedMenu[category].length === 0 ? (
+                    <div className="rounded-2xl bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                      No items yet.
                     </div>
-                  ))}
+                  ) : (
+                    groupedMenu[category].map((item) => (
+                      <div
+                        key={item._id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold">{item.name}</p>
+                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                              {item.price.toLocaleString()} MNT
+                            </p>
+                            {item.description ? (
+                              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                                {item.description}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => startEdit(item)}
+                              className="rounded-xl"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(item._id)}
+                              className="rounded-xl text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
-            )
-          })}
+            ))}
+          </div>
 
           <button
+            type="button"
             onClick={() => setAdding(true)}
-            className="group w-full rounded-[2.5rem] border-2 border-dashed border-white/5 py-10 flex flex-col items-center justify-center gap-3 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all"
+            className="flex w-full items-center justify-center gap-3 rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-5 text-sm font-semibold text-slate-700 transition hover:border-slate-950 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-100 dark:hover:bg-slate-900"
           >
-            <div className="h-12 w-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-purple-500/20 group-hover:text-purple-400 transition-all">
-              <Plus size={24} />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 group-hover:text-purple-400">Шинэ хоол нэмэх</span>
+            <Plus className="h-4 w-4" />
+            Add menu item
           </button>
         </>
       ) : (
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="rounded-[2.5rem] border border-white/10 bg-[#0d041a] p-10 space-y-8 shadow-2xl">
-          <div className="flex justify-between items-center">
-            <h3 className="text-2xl font-black italic uppercase tracking-tighter">
-              {editing ? "Меню засах" : "Шинэ меню нэмэх"}
-            </h3>
-            <button onClick={resetForm} className="text-white/20 hover:text-white">
-              <X size={20} />
-            </button>
+        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                {editing ? "Edit item" : "New item"}
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold">
+                {editing ? "Update menu item" : "Add a menu item"}
+              </h3>
+            </div>
+            <Button type="button" variant="outline" onClick={resetForm} className="rounded-2xl">
+              Cancel
+            </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">Нэр *</label>
-              <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-purple-500 font-bold" placeholder="Ж: Шарсан далавч" />
+          <div className="grid gap-5 md:grid-cols-2">
+            <div>
+              <label className={labelClassName}>Item name</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                className={inputClassName}
+                placeholder="Fried wings"
+              />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">Ангилал</label>
-              <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value as any }))} className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-purple-500 font-bold">
-                <option value="food">Хоол (Food)</option>
-                <option value="drink">Ундаа (Drink)</option>
-                <option value="set">Сет (Set)</option>
+            <div>
+              <label className={labelClassName}>Category</label>
+              <select
+                value={form.category}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    category: e.target.value as MenuItem["category"],
+                  }))
+                }
+                className={inputClassName}
+              >
+                <option value="food">Food</option>
+                <option value="drink">Drink</option>
+                <option value="set">Set</option>
               </select>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">Үнэ (₮) *</label>
-              <input type="number" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-purple-500 font-bold text-purple-400" placeholder="0" />
+            <div>
+              <label className={labelClassName}>Price</label>
+              <input
+                type="number"
+                value={form.price}
+                onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
+                className={inputClassName}
+                placeholder="0"
+              />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">Тайлбар</label>
-              <input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-purple-500" placeholder="Орц найрлага..." />
+            <div>
+              <label className={labelClassName}>Short description</label>
+              <input
+                value={form.description}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, description: e.target.value }))
+                }
+                className={inputClassName}
+                placeholder="Popular late-night snack"
+              />
             </div>
-
             <div className="md:col-span-2">
               <ImageUploadField
-                label="Зураг"
+                label="Item image"
                 value={form.image ? [form.image] : []}
-                onChange={(images) => setForm((prev) => ({ ...prev, image: images[0] ?? "" }))}
-                theme="dark"
+                onChange={(images) =>
+                  setForm((prev) => ({ ...prev, image: images[0] ?? "" }))
+                }
+                helperText="Optional, but recommended for the admin catalog."
               />
             </div>
           </div>
 
-          <div className="flex gap-4 pt-4">
+          <div className="mt-6 flex justify-end">
             <Button
-              disabled={loading}
+              type="button"
               onClick={editing ? handleUpdate : handleAdd}
-              variant="neon"
-              className="flex-1 h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px]"
+              disabled={loading}
+              className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
             >
-              {loading ? <Loader2 className="animate-spin" /> : editing ? "Шинэчлэх" : "Нэмэх"}
+              <Soup className="h-4 w-4" />
+              {loading ? "Saving..." : editing ? "Save changes" : "Create item"}
             </Button>
-            <button onClick={resetForm} className="px-10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white/20 hover:bg-white/5 transition-colors">
-              Цуцлах
-            </button>
           </div>
-        </motion.div>
+        </div>
       )}
     </div>
   )

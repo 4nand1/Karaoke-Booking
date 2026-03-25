@@ -1,25 +1,28 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Sun,
   Moon,
   Mic,
   LayoutDashboard,
-  Store,
   LogIn,
   UserPlus,
   MapPin,
   User,
   BookOpen,
   LogOut,
-  BadgeCheck,
+  Search,
+  Languages,
 } from "lucide-react"
-import { SignOutButton, useUser } from "@clerk/nextjs"
+import { SignOutButton, useAuth, useUser } from "@clerk/nextjs"
 
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { api } from "@/lib/axios"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -30,68 +33,97 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 type PublicMetadata = {
-  role?: "customer" | "karaoke_owner"
+  role?: "user" | "admin" | "customer" | "karaoke_owner"
   ownerStatus?: "pending" | "approved" | null
 }
 
-const THEME_CHANGE_EVENT = "karaoke-theme-change"
-
-const getThemePreference = () => {
-  if (typeof window === "undefined") {
-    return false
-  }
-
-  const savedTheme = window.localStorage.getItem("theme")
-
-  if (savedTheme === "dark") {
-    return true
-  }
-
-  if (savedTheme === "light") {
-    return false
-  }
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-}
-
-const subscribeToTheme = (onStoreChange: () => void) => {
-  if (typeof window === "undefined") {
-    return () => undefined
-  }
-
-  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-  const handleChange = () => onStoreChange()
-
-  window.addEventListener("storage", handleChange)
-  window.addEventListener(THEME_CHANGE_EVENT, handleChange)
-  mediaQuery.addEventListener("change", handleChange)
-
-  return () => {
-    window.removeEventListener("storage", handleChange)
-    window.removeEventListener(THEME_CHANGE_EVENT, handleChange)
-    mediaQuery.removeEventListener("change", handleChange)
-  }
+type ProfileResponse = {
+  profile?: {
+    role?: "customer" | "karaoke_owner"
+    ownerStatus?: "pending" | "approved" | null
+  } | null
 }
 
 export default function Navbar() {
+  const router = useRouter()
   const { user, isSignedIn } = useUser()
+  const { getToken, isLoaded } = useAuth()
 
+  const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") return false
+
+    const savedTheme = localStorage.getItem("theme")
+
+    if (savedTheme === "dark") return true
+    if (savedTheme === "light") return false
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+  })
   const [scrolled, setScrolled] = useState(false)
-  const dark = useSyncExternalStore(subscribeToTheme, getThemePreference, () => false)
+  const [language, setLanguage] = useState<"EN" | "MN">(() => {
+    if (typeof window === "undefined") return "EN"
+
+    const savedLanguage = localStorage.getItem("language")
+    return savedLanguage === "MN" ? "MN" : "EN"
+  })
+  const [searchQuery, setSearchQuery] = useState("")
+  const [profileMetadata, setProfileMetadata] = useState<PublicMetadata | null>(null)
+  const hasHydrated = useRef(false)
 
   const metadata = useMemo(() => {
     return (user?.publicMetadata as PublicMetadata | undefined) ?? {}
   }, [user])
 
+  useEffect(() => {
+    const syncProfile = async () => {
+      if (!isLoaded) return
+
+      if (!isSignedIn) {
+        setProfileMetadata(null)
+        return
+      }
+
+      try {
+        const token = await getToken()
+
+        if (!token) {
+          setProfileMetadata(null)
+          return
+        }
+
+        const res = await api.get<ProfileResponse>("/me/profile", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        setProfileMetadata({
+          role: res.data?.profile?.role,
+          ownerStatus: res.data?.profile?.ownerStatus ?? null,
+        })
+      } catch {
+        setProfileMetadata(null)
+      }
+    }
+
+    void syncProfile()
+  }, [getToken, isLoaded, isSignedIn, user?.id])
+
+  const effectiveMetadata = profileMetadata ?? metadata
+
   const isApprovedOwner =
-    metadata.role === "karaoke_owner" && metadata.ownerStatus === "approved"
+    effectiveMetadata.role === "karaoke_owner" &&
+    effectiveMetadata.ownerStatus === "approved"
 
-  const isPendingOwner =
-    metadata.role === "karaoke_owner" && metadata.ownerStatus === "pending"
+  const isAdmin =
+    effectiveMetadata.role === "admin" ||
+    effectiveMetadata.role === "karaoke_owner" ||
+    isApprovedOwner
+  const isRegularUser = isSignedIn && !isAdmin
 
-  const adminHref = isSignedIn
-    ? "/admin"
-    : "/sign-in?role=admin&redirect_url=/admin"
+  useEffect(() => {
+    hasHydrated.current = true
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50)
@@ -100,15 +132,21 @@ export default function Navbar() {
   }, [])
 
   useEffect(() => {
+    if (!hasHydrated.current) return
     document.documentElement.classList.toggle("dark", dark)
     localStorage.setItem("theme", dark ? "dark" : "light")
   }, [dark])
 
-  const toggleTheme = () => {
-    const nextDark = !dark
-    document.documentElement.classList.toggle("dark", nextDark)
-    window.localStorage.setItem("theme", nextDark ? "dark" : "light")
-    window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
+  useEffect(() => {
+    if (!hasHydrated.current) return
+    localStorage.setItem("language", language)
+  }, [language])
+
+  const handleSearch = () => {
+    const trimmed = searchQuery.trim()
+    if (!trimmed) return
+    router.push(`/search?q=${encodeURIComponent(trimmed)}`)
+    setSearchQuery("")
   }
 
   return (
@@ -121,8 +159,6 @@ export default function Navbar() {
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
       <div className="container mx-auto flex items-center justify-between px-6 py-4">
-        
-        {/* Logo */}
         <motion.div whileHover={{ scale: 1.05 }}>
           <Link href="/" className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
@@ -134,17 +170,56 @@ export default function Navbar() {
           </Link>
         </motion.div>
 
-        {/* Right side */}
         <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="glass" size="icon" className="rounded-xl" type="button">
+                <Search className="h-5 w-5 text-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
 
-          {/* Location button */}
+            <DropdownMenuContent align="end" className="w-80 rounded-xl p-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search karaokes..."
+                  className="rounded-lg"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch()
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="default"
+                  size="icon"
+                  className="rounded-lg"
+                  onClick={handleSearch}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant="glass"
+            className="rounded-xl px-3"
+            type="button"
+            onClick={() => setLanguage((prev) => (prev === "EN" ? "MN" : "EN"))}
+          >
+            <Languages className="mr-2 h-4 w-4 text-foreground" />
+            <span className="text-sm font-medium text-foreground">{language}</span>
+          </Button>
+
           <Button asChild variant="glass" size="icon" className="rounded-xl">
             <Link href="/map" aria-label="Open map page">
               <MapPin className="h-5 w-5 text-foreground" />
             </Link>
           </Button>
 
-          {/* User dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="glass" size="icon" className="rounded-xl" type="button">
@@ -152,14 +227,13 @@ export default function Navbar() {
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-56 rounded-xl">
+            <DropdownMenuContent align="end" className="w-60 rounded-xl">
               <DropdownMenuLabel>
                 {isSignedIn ? `Hi, ${user?.firstName || "User"}` : "Account"}
               </DropdownMenuLabel>
 
               <DropdownMenuSeparator />
 
-              {/* 🔓 SIGNED OUT */}
               {!isSignedIn ? (
                 <>
                   <DropdownMenuItem asChild>
@@ -175,42 +249,29 @@ export default function Navbar() {
                       Sign up
                     </Link>
                   </DropdownMenuItem>
-
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/register-karaoke"
-                      className="flex items-center gap-2"
-                    >
-                      <Store className="h-4 w-4" />
-                      Register karaoke
-                    </Link>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem asChild>
-                    <Link href={adminHref} className="flex items-center gap-2">
-                      <LayoutDashboard className="h-4 w-4" />
-                      Admin
-                    </Link>
-                  </DropdownMenuItem>
                 </>
-              ) : isApprovedOwner ? (
-                /* 🏢 APPROVED OWNER */
+              ) : isAdmin ? (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link
-                      href={adminHref}
-                      className="flex items-center gap-2"
-                    >
+                    <Link href="/admin/dashboard" className="flex items-center gap-2">
                       <LayoutDashboard className="h-4 w-4" />
-                      Admin
+                      Admin dashboard
                     </Link>
                   </DropdownMenuItem>
 
+                  <DropdownMenuSeparator />
+
+                  <SignOutButton redirectUrl="/">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <LogOut className="h-4 w-4" />
+                      Log out
+                    </DropdownMenuItem>
+                  </SignOutButton>
+                </>
+              ) : isRegularUser ? (
+                <>
                   <DropdownMenuItem asChild>
-                    <Link
-                      href="/my-bookings"
-                      className="flex items-center gap-2"
-                    >
+                    <Link href="/my-bookings" className="flex items-center gap-2">
                       <BookOpen className="h-4 w-4" />
                       My bookings
                     </Link>
@@ -225,57 +286,15 @@ export default function Navbar() {
                     </DropdownMenuItem>
                   </SignOutButton>
                 </>
-              ) : (
-                /* 👤 CUSTOMER (or pending owner) */
-                <>
-                  <DropdownMenuItem asChild>
-                    <Link href="/my-bookings" className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      My bookings
-                    </Link>
-                  </DropdownMenuItem>
-
-                  {isPendingOwner && (
-                    <DropdownMenuItem disabled className="flex items-center gap-2">
-                      <BadgeCheck className="h-4 w-4" />
-                      Approval pending
-                    </DropdownMenuItem>
-                  )}
-
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/register-karaoke"
-                      className="flex items-center gap-2"
-                    >
-                      <Store className="h-4 w-4" />
-                      Register karaoke
-                    </Link>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem asChild>
-                    <Link href={adminHref} className="flex items-center gap-2">
-                      <LayoutDashboard className="h-4 w-4" />
-                      Admin
-                    </Link>
-                  </DropdownMenuItem>
-
-                  <SignOutButton redirectUrl="/">
-                    <DropdownMenuItem className="cursor-pointer">
-                      <LogOut className="h-4 w-4" />
-                      Log out
-                    </DropdownMenuItem>
-                  </SignOutButton>
-                </>
-              )}
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Theme toggle */}
           <Button
             variant="glass"
             size="icon"
             className="rounded-xl"
-            onClick={toggleTheme}
+            onClick={() => setDark((prev) => !prev)}
             type="button"
           >
             <AnimatePresence mode="wait">
@@ -294,7 +313,6 @@ export default function Navbar() {
               </motion.div>
             </AnimatePresence>
           </Button>
-
         </div>
       </div>
     </motion.nav>
