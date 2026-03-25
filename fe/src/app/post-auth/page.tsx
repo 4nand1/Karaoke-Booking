@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter, useSearchParams } from "next/navigation"
 import type { AxiosError } from "axios"
@@ -20,6 +20,14 @@ type ProfileResponse = {
 const STORAGE_KEY = "karaoke_app_selected_role"
 
 export default function PostAuthPage() {
+  return (
+    <Suspense fallback={<PostAuthFallback />}>
+      <PostAuthContent />
+    </Suspense>
+  )
+}
+
+function PostAuthContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { getToken, isLoaded } = useAuth()
@@ -141,6 +149,16 @@ export default function PostAuthPage() {
       <div>
         <p className="text-lg font-semibold">Completing login...</p>
         {error ? <p className="mt-3 text-sm text-red-500">{error}</p> : null}
+      </div>
+    </div>
+  )
+}
+
+function PostAuthFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center p-6 text-center">
+      <div>
+        <p className="text-lg font-semibold">Completing login...</p>
       </div>
     </div>
   )
