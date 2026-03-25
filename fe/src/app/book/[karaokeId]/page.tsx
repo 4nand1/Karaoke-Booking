@@ -319,113 +319,204 @@ export default function BookingPage() {
               <p className="mt-2 text-sm leading-7 text-muted-foreground">{karaoke.description}</p>
             </div>
 
-            {/* Rooms */}
-            <div>
-              <h2 className="text-lg font-semibold">Choose a Room</h2>
-              {(karaoke.rooms ?? []).length ? (
-                <div className="mt-4 grid gap-3">
-                  {(karaoke.rooms ?? []).map((room) => {
-                    const selected = room._id === selectedRoomId;
-                    return (
-                      <button
-                        key={room._id}
-                        type="button"
-                        onClick={() => { setSelectedRoomId(room._id); setSelectedSlots([]); }}
-                        className={["rounded-2xl border p-4 text-left transition-all", selected ? "border-primary bg-primary/10" : "border-border bg-background hover:border-primary/40"].join(" ")}
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <div>
-                            <p className="font-semibold">{room.name}</p>
-                            <p className="mt-1 text-sm text-muted-foreground">{room.type} room</p>
-                            <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                              <Users className="h-4 w-4" />Up to {room.capacity} guests
-                            </p>
-                          </div>
-                          <p className="text-lg font-bold text-primary">₮{room.price.toLocaleString()}/hr</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="mt-4 rounded-2xl border border-dashed border-border bg-background p-5">
-                  <p className="font-medium">Room information is coming soon</p>
+            {/* Rooms Section - Minimal Image Design */}
+<div>
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-xl font-black italic uppercase tracking-tighter">Өрөө сонгох</h2>
+    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground bg-secondary px-3 py-1 rounded-full">
+      {(karaoke.rooms ?? []).length} боломжит
+    </span>
+  </div>
+  
+  {(karaoke.rooms ?? []).length ? (
+    <div className="mt-4 grid gap-4">
+      {(karaoke.rooms ?? []).map((room) => {
+        const selected = room._id === selectedRoomId;
+        return (
+          <button
+            key={room._id}
+            type="button"
+            onClick={() => { setSelectedRoomId(room._id); setSelectedSlots([]); }}
+            className={[
+              "group relative flex items-center gap-5 rounded-[2rem] border p-3 pl-3 pr-6 transition-all duration-500",
+              selected 
+                ? "border-primary bg-primary/5 shadow-[0_20px_40px_rgba(0,0,0,0.1)] scale-[1.02]" 
+                : "border-white/5 bg-card/40 hover:border-white/20 hover:bg-card"
+            ].join(" ")}
+          >
+            {/* Room Image - Minimalist Square */}
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[1.4rem] border border-white/10 shadow-lg rounded-full">
+              <img 
+                src={room.image || "/karaoke.jpg"} 
+                alt={room.name} 
+                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110 rounded-full" 
+              />
+              {selected && (
+                <div className="absolute inset-0 bg-primary/20 backdrop-blur-[2px] flex items-center justify-center">
+                  <div className="h-2 w-2 rounded-full bg-white animate-ping" />
                 </div>
               )}
             </div>
 
+            {/* Room Info */}
+            <div className="flex flex-1 items-center justify-between">
+              <div className="space-y-1">
+                <p className={`font-black uppercase tracking-tight text-base transition-colors ${selected ? "text-primary" : "text-foreground"}`}>
+                  {room.name}
+                </p>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                    <Users className="h-3 w-3" /> {room.capacity} хүн
+                  </span>
+                  <span className="h-1 w-1 rounded-full bg-white/10" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {room.type}
+                  </span>
+                </div>
+              </div>
+
+              {/* Price Tag */}
+              <div className="text-right">
+                <p className={`text-lg font-black tracking-tighter transition-all ${selected ? "text-primary scale-110" : "text-foreground/80"}`}>
+                  ₮{room.price.toLocaleString()}
+                </p>
+                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground mt-0.5">цаг / hr</p>
+              </div>
+            </div>
+
+            {/* Selected Indicator Dot */}
+            {selected && (
+              <div className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-primary border-4 border-background shadow-lg" />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  ) : (
+    <div className="mt-4 rounded-[2rem] border border-dashed border-white/10 bg-white/[0.02] p-8 text-center">
+      <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Өрөөний мэдээлэл удахгүй...</p>
+    </div>
+  )}
+</div>
+
             {/* Menu by category */}
-            <div>
-              <h2 className="text-lg font-semibold">Menu</h2>
-              {menuByCategory.length > 0 ? (
-                <div className="mt-4 space-y-6">
-                  {menuByCategory.map(({ category, items }) => (
-                    <div key={category}>
-                      <h3 className="mb-3 text-sm font-bold text-muted-foreground uppercase tracking-widest">
-                        {CATEGORY_LABELS[category] ?? category}
-                      </h3>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {items.map((item, index) => {
-                          const qty = getQuantity(item._id);
-                          return (
-                            <div
-                              key={item._id || `${item.name}-${index}`}
-                              className={["rounded-2xl border p-4 transition-all", qty > 0 ? "border-primary bg-primary/5" : "border-border bg-background"].join(" ")}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1">
-                                  <p className="font-medium">{item.name || "Menu item"}</p>
-                                  <p className="mt-1 text-sm text-muted-foreground">{item.description || ""}</p>
-                                  <p className="mt-2 text-sm font-bold text-primary">
-                                    {typeof item.price === "number" ? `₮${item.price.toLocaleString()}` : "-"}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {qty > 0 ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => updateMenuQuantity(item, -1)}
-                                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:border-primary transition-colors"
-                                      >
-                                        <Minus className="h-3 w-3" />
-                                      </button>
-                                      <span className="w-6 text-center font-bold text-sm">{qty}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => updateMenuQuantity(item, 1)}
-                                        className="h-8 w-8 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors"
-                                      >
-                                        <Plus className="h-3 w-3 text-white" />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => updateMenuQuantity(item, 1)}
-                                      className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:border-primary transition-colors"
-                                    >
-                                      <Plus className="h-3 w-3" />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+          {/* --- Зассан Menu хэсэг --- */}
+<div className="space-y-10">
+  <div className="flex items-center justify-between mb-2">
+    <h2 className="text-xl font-black italic uppercase tracking-tighter">Меню</h2>
+    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground bg-secondary px-3 py-1 rounded-full">
+      {(karaoke.menu ?? []).length} сонголт
+    </span>
+  </div>
+
+  {menuByCategory.length > 0 ? (
+    <div className="mt-4 space-y-12">
+      {menuByCategory.map(({ category, items }) => (
+        <div key={category} className="space-y-6">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 flex items-center gap-2 ml-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-primary" /> 
+            {CATEGORY_LABELS[category] ?? category}
+          </h3>
+          
+          <div className="grid gap-4 md:grid-cols-1">
+            {items.map((item, index) => {
+              const qty = getQuantity(item._id);
+              const hasQty = qty > 0;
+              
+              return (
+                <div
+                  key={item._id || `${item.name}-${index}`}
+                  className={[
+                    "group relative flex items-center gap-5 rounded-[2.5rem] border p-3 pl-3 pr-6 transition-all duration-500",
+                    hasQty 
+                      ? "border-primary bg-primary/5 shadow-[0_20px_40px_rgba(0,0,0,0.1)] scale-[1.01]" 
+                      : "border-white/5 bg-card/40 hover:border-white/20 hover:bg-card"
+                  ].join(" ")}
+                >
+                  {/* Item Image - Round & Minimal */}
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-white/10 shadow-lg bg-white/5 flex items-center justify-center">
+                    {item.image ? (
+                      <img 
+                        src={item.image} 
+                        alt={item.name} 
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                      />
+                    ) : (
+                      <Utensils className="h-6 w-6 text-white/10" />
+                    )}
+                    {hasQty && (
+                      <div className="absolute inset-0 bg-primary/40 backdrop-blur-[2px] flex items-center justify-center">
+                        <span className="text-xl font-black text-white drop-shadow-md">{qty}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Item Info */}
+                  <div className="flex flex-1 items-center justify-between gap-4">
+                    <div className="space-y-1 min-w-0">
+                      <p className={`font-black uppercase tracking-tight text-base truncate transition-colors ${hasQty ? "text-primary" : "text-foreground"}`}>
+                        {item.name || "Нэргүй"}
+                      </p>
+                      <p className="text-[10px] font-medium text-muted-foreground line-clamp-1 leading-relaxed opacity-60">
+                        {item.description || "Амт чанартай шинэ бүтээгдэхүүн"}
+                      </p>
+                    </div>
+
+                    {/* Price & Modern Controls */}
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <div className="text-right">
+                        <p className={`text-lg font-black tracking-tighter transition-all ${hasQty ? "text-primary scale-105" : "text-foreground/80"}`}>
+                          ₮{item.price?.toLocaleString()}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-1 bg-black/20 rounded-full p-1 border border-white/5 backdrop-blur-md">
+                        {hasQty && (
+                          <button
+                            type="button"
+                            onClick={() => updateMenuQuantity(item, -1)}
+                            className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-white/10 text-white/40 hover:text-white transition-all active:scale-90"
+                          >
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        
+                        <button
+                          type="button"
+                          onClick={() => updateMenuQuantity(item, 1)}
+                          className={[
+                            "h-8 w-8 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg",
+                            hasQty ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white"
+                          ].join(" ")}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4 rounded-2xl border border-dashed border-border bg-background p-5">
-                  <div className="flex items-center gap-2">
-                    <Utensils className="h-4 w-4 text-primary" />
-                    <p className="font-medium">Menu will appear here</p>
                   </div>
+
+                  {/* Сонгогдсон үед харагдах жижиг цэг */}
+                  {hasQty && (
+                    <div className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-primary border-4 border-background shadow-lg" />
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className="mt-4 rounded-[2.5rem] border border-dashed border-white/10 bg-white/[0.02] p-12 text-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-12 w-12 rounded-full bg-white/5 flex items-center justify-center">
+           <Utensils className="h-6 w-6 text-white/10" />
+        </div>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Меню удахгүй...</p>
+      </div>
+    </div>
+  )}
+</div>
           </div>
         </section>
 
