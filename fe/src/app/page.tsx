@@ -46,6 +46,7 @@ type KaraokeCardViewModel = {
   location: string
   rating: number | null
   price: string
+  startingPrice: number | null
   hours: string
   roomSize: "small" | "medium" | "large" | "vip" | "all"
   isOpenNow: boolean
@@ -113,6 +114,12 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
         : typeof lowestRoomPrice === "number" && Number.isFinite(lowestRoomPrice)
           ? `₮${lowestRoomPrice.toLocaleString()}/hr`
         : "Contact for price",
+    startingPrice:
+      typeof karaoke.pricePerHour === "number"
+        ? karaoke.pricePerHour
+        : typeof lowestRoomPrice === "number" && Number.isFinite(lowestRoomPrice)
+          ? lowestRoomPrice
+          : null,
     hours:
       karaoke.openingHours ||
       [karaoke.openingTime, karaoke.closingTime].filter(Boolean).join(" - ") ||
@@ -125,8 +132,9 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
 
 const Index = () => {
   const [filters, setFilters] = useState<FilterValues>({
-    priceSort: "default",
-    minRating: "all",
+    minPrice: "",
+    maxPrice: "",
+    minRating: 0,
     openNow: false,
     roomSize: "all",
   })
@@ -167,10 +175,15 @@ const Index = () => {
   )
 
   const filteredSpots = useMemo(() => {
+    const minPrice = Number(filters.minPrice)
+    const maxPrice = Number(filters.maxPrice)
+    const hasMinPrice = filters.minPrice.trim() !== "" && !Number.isNaN(minPrice)
+    const hasMaxPrice = filters.maxPrice.trim() !== "" && !Number.isNaN(maxPrice)
+
     const filtered = mappedKaraokes.filter((spot) => {
       if (
-        filters.minRating !== "all" &&
-        (spot.rating === null || spot.rating < Number(filters.minRating))
+        filters.minRating > 0 &&
+        (spot.rating === null || spot.rating < filters.minRating)
       ) {
         return false
       }
@@ -183,24 +196,16 @@ const Index = () => {
         return false
       }
 
+      if (hasMinPrice && (spot.startingPrice === null || spot.startingPrice < minPrice)) {
+        return false
+      }
+
+      if (hasMaxPrice && (spot.startingPrice === null || spot.startingPrice > maxPrice)) {
+        return false
+      }
+
       return true
     })
-
-    if (filters.priceSort === "lowToHigh") {
-      return [...filtered].sort((a, b) => {
-        const priceA = Number(a.price.replace(/[^\d.]/g, "")) || Number.MAX_SAFE_INTEGER
-        const priceB = Number(b.price.replace(/[^\d.]/g, "")) || Number.MAX_SAFE_INTEGER
-        return priceA - priceB
-      })
-    }
-
-    if (filters.priceSort === "highToLow") {
-      return [...filtered].sort((a, b) => {
-        const priceA = Number(a.price.replace(/[^\d.]/g, "")) || -1
-        const priceB = Number(b.price.replace(/[^\d.]/g, "")) || -1
-        return priceB - priceA
-      })
-    }
 
     return filtered
   }, [filters, mappedKaraokes])
