@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { apiBaseUrl } from "@/lib/api-url"
+import { ImageUploadField } from "@/components/ui/image-upload-field"
 
 type FormDataType = {
   karaokeName: string
@@ -20,7 +21,7 @@ type FormDataType = {
   pricePerHour: string
   capacity: string
   amenities: string
-  images: string
+  images: string[]
   rulesPolicies: string
 }
 
@@ -39,7 +40,7 @@ const initialForm: FormDataType = {
   pricePerHour: "",
   capacity: "",
   amenities: "",
-  images: "",
+  images: [],
   rulesPolicies: "",
 }
 
@@ -118,10 +119,7 @@ export default function KaraokeRegisterForm() {
               .split(",")
               .map((item) => item.trim())
               .filter(Boolean),
-            images: formData.images
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean),
+            images: formData.images,
             rulesPolicies: formData.rulesPolicies,
           }),
         }
@@ -293,13 +291,12 @@ export default function KaraokeRegisterForm() {
           className="w-full rounded-lg border px-4 py-3"
         />
 
-        <input
-          type="text"
-          name="images"
-          placeholder="Image URLs, comma separated"
+        <ImageUploadField
+          label="Images"
           value={formData.images}
-          onChange={handleChange}
-          className="w-full rounded-lg border px-4 py-3"
+          onChange={(images) => setFormData((prev) => ({ ...prev, images }))}
+          multiple
+          helperText="Select karaoke photos from your device."
         />
 
         <textarea

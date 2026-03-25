@@ -4,9 +4,23 @@ import { OrderModel } from "../../database/schema/order.schema"
 export const updateOrder: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params
-    const { status } = req.body
+    const { status, paymentStatus, stripeSessionId } = req.body
 
-    const order = await OrderModel.findByIdAndUpdate(id, { status }, { new: true })
+    const updates: Record<string, unknown> = {}
+
+    if (status) {
+      updates.status = status
+    }
+
+    if (paymentStatus) {
+      updates.paymentStatus = paymentStatus
+    }
+
+    if (typeof stripeSessionId === "string") {
+      updates.stripeSessionId = stripeSessionId
+    }
+
+    const order = await OrderModel.findByIdAndUpdate(id, updates, { new: true })
     if (!order) {
       res.status(404).json({ message: "Order not found" })
       return

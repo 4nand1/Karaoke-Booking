@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import { motion } from "framer-motion"
 import { Plus, Trash2, UtensilsCrossed } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
+import { ImageUploadField } from "@/components/ui/image-upload-field"
 
 type MenuItem = {
   _id: string
@@ -124,8 +125,15 @@ export function MenuTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: (
               <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-purple-500" placeholder="Optional" />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Зургийн URL</label>
-              <input value={form.image} onChange={e => setForm(p => ({ ...p, image: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-purple-500" placeholder="https://... (optional)" />
+              <ImageUploadField
+                label="Зураг"
+                value={form.image ? [form.image] : []}
+                onChange={(images) =>
+                  setForm((prev) => ({ ...prev, image: images[0] ?? "" }))
+                }
+                theme="dark"
+                helperText="Menu item image is optional."
+              />
             </div>
           </div>
           <div className="flex gap-4">

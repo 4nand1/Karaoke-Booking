@@ -7,6 +7,8 @@ import { motion } from "framer-motion"
 import { Plus, Star, Trash2 } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
 import Iridescence from "@/components/Iridescence"
+import { Button } from "@/components/ui/button"
+import { ImageUploadField } from "@/components/ui/image-upload-field"
 
 type RoomType = "VIP" | "Medium" | "Small"
 
@@ -111,14 +113,13 @@ function RoomCard({
         </div>
 
         <div>
-          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">
-            Image URL
-          </label>
-          <input
-            value={room.image}
-            onChange={e => onUpdate(room.id, "image", e.target.value)}
-            placeholder="https://..."
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-white/25 focus:border-purple-500"
+          <ImageUploadField
+            label="Image *"
+            value={room.image ? [room.image] : []}
+            onChange={(images) => onUpdate(room.id, "image", images[0] ?? "")}
+            theme="dark"
+            required
+            helperText="Choose a room image from your device."
           />
         </div>
       </div>
@@ -258,13 +259,14 @@ export default function RoomsSetupPage() {
               </p>
             )}
 
-            <button
+            <Button
               onClick={handleSubmit}
+              variant="neon"
               disabled={loading}
-              className="w-full rounded-[1.5rem] bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4 text-sm font-black uppercase tracking-widest text-white shadow-xl shadow-purple-900/30 transition-all disabled:opacity-50"
+              className="h-auto w-full rounded-[1.5rem] px-6 py-4 text-sm font-black uppercase tracking-widest"
             >
               {loading ? "Saving..." : "Save rooms & finish"}
-            </button>
+            </Button>
           </div>
         </motion.div>
       </div>

@@ -15,6 +15,13 @@ const orderSchema = new Schema(
     guestCount: { type: Number, default: 1 },
     totalAmount: { type: Number, default: 0 },
     status: { type: String, enum: ["pending", "confirmed", "cancelled"], default: "pending" },
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid", "refunded"],
+      default: "unpaid",
+      index: true,
+    },
+    stripeSessionId: { type: String, default: null, index: true },
     menuItems: [{
   itemId: { type: String, default: null },
   name: { type: String, default: null },

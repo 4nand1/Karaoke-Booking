@@ -1,18 +1,11 @@
 import type { RequestHandler } from "express"
 import { getAuth } from "@clerk/express"
 import { KaraokeModel } from "../../models/Karaoke"
-import { isDatabaseConnected } from "../../config/db"
 
 export const getKaraokeById: RequestHandler = async (req, res) => {
   try {
-    if (!isDatabaseConnected()) {
-      return res.status(503).json({ message: "Database is not connected yet" })
-    }
-
     const { id } = req.params
-    const { userId } = process.env.CLERK_SECRET_KEY
-      ? getAuth(req)
-      : { userId: null }
+    const { userId } = getAuth(req)
 
     const karaoke = await KaraokeModel.findById(id)
 

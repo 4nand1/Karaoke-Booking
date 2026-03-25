@@ -17,6 +17,8 @@ type Order = {
   guestCount?: number
   totalAmount?: number
   status?: "pending" | "confirmed" | "cancelled"
+  paymentStatus?: "unpaid" | "paid" | "refunded"
+  stripeSessionId?: string | null
   createdAt?: string
   menuItems?: {
     itemId?: string
@@ -245,7 +247,7 @@ export function OrdersTab({
               >
                 <div className="flex items-center gap-5">
                   <div className={`h-12 w-12 rounded-2xl flex items-center justify-center border ${
-                    order.status === "confirmed"
+                    order.paymentStatus === "paid" || order.status === "confirmed"
                       ? "border-green-500/20 bg-green-500/10 text-green-400"
                       : "border-purple-500/20 bg-purple-500/10 text-purple-400"
                   }`}>
@@ -267,6 +269,11 @@ export function OrdersTab({
                       order.status === "confirmed" ? "text-green-500" : order.status === "cancelled" ? "text-red-500" : "text-yellow-500"
                     }`}>
                       {order.status ?? "pending"}
+                    </p>
+                    <p className={`mt-1 text-[9px] font-black uppercase tracking-widest ${
+                      order.paymentStatus === "paid" ? "text-emerald-400" : "text-white/30"
+                    }`}>
+                      {order.paymentStatus === "paid" ? "stripe paid" : "payment pending"}
                     </p>
                   </div>
                   <div className={`p-2 rounded-xl bg-white/5 transition-transform ${expanded === order._id ? "rotate-90 text-purple-400" : "text-white/20"}`}>
@@ -290,6 +297,15 @@ export function OrdersTab({
                         <DetailItem label="Огноо" value={order.bookingDate} />
                         <DetailItem label="Нийт үнэ" value={`₮${order.totalAmount?.toLocaleString()}`} highlight />
                       </div>
+                      <div className={`rounded-2xl border px-4 py-3 text-[11px] font-black uppercase tracking-widest ${
+                        order.paymentStatus === "paid"
+                          ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                          : "border-white/10 bg-white/[0.02] text-white/40"
+                      }`}>
+                        {order.paymentStatus === "paid"
+                          ? "Stripe payment completed"
+                          : "Stripe payment pending"}
+                      </div>
                       {order.menuItems && order.menuItems.length > 0 && (
   <div className="rounded-2xl bg-white/[0.02] border border-white/5 p-4 space-y-2">
     <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2">Захиалсан меню</p>
@@ -312,7 +328,24 @@ export function OrdersTab({
   </div>
 )}
                       <div className="flex gap-3">
-                        {order.status === "pending" && (
+                        {order.paymentStatus !== "paid" ? (
+                          <>
+                            <button
+                              type="button"
+                              disabled
+                              className="flex-1 cursor-not-allowed rounded-2xl border border-white/10 bg-white/[0.02] py-4 text-[10px] font-black uppercase tracking-widest text-white/30"
+                            >
+                              Stripe payment pending
+                            </button>
+                            <button
+                              type="button"
+                              disabled
+                              className="flex-1 cursor-not-allowed rounded-2xl border border-white/10 bg-white/[0.02] py-4 text-[10px] font-black uppercase tracking-widest text-white/30"
+                            >
+                              Admin action disabled
+                            </button>
+                          </>
+                        ) : order.status === "pending" && (
                           <>
                             <button onClick={e => { e.stopPropagation(); updateStatus(order._id, "confirmed") }}
                               className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all">

@@ -6,7 +6,7 @@ import { Star, Send, Trash2, LogIn } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/axios";
-import { clerkEnabled } from "@/lib/clerk-config";
+import { Button } from "@/components/ui/button";
 
 interface Review {
   _id?: string;
@@ -29,7 +29,7 @@ type ReviewApiResponse = {
   text?: string;
   createdAt?: string;
   karaokeId?: string;
-  userId?: string | null;
+  userId?: string;
 };
 
 const formatReview = (review: ReviewApiResponse): Review => {
@@ -53,36 +53,12 @@ const formatReview = (review: ReviewApiResponse): Review => {
     timestamp,
     createdAt: review.createdAt,
     karaokeId: review.karaokeId,
-    userId: review.userId ?? undefined,
+    userId: review.userId,
   };
 };
 
-type ReviewFormInnerProps = {
-  karaokeId?: string;
-  isSignedIn: boolean;
-  isLoaded: boolean;
-  userId?: string | null;
-};
-
-function ReviewFormWithClerk({ karaokeId }: { karaokeId?: string }) {
+const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
   const { isSignedIn, isLoaded, user } = useUser();
-
-  return (
-    <ReviewFormInner
-      karaokeId={karaokeId}
-      isSignedIn={Boolean(isSignedIn)}
-      isLoaded={Boolean(isLoaded)}
-      userId={user?.id}
-    />
-  );
-}
-
-const ReviewFormInner = ({
-  karaokeId,
-  isSignedIn,
-  isLoaded,
-  userId,
-}: ReviewFormInnerProps) => {
   const router = useRouter();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,7 +135,7 @@ const ReviewFormInner = ({
       try {
         await api.delete(`/reviews/${id}`, {
           data: {
-            userId,
+            userId: user?.id,
           },
         });
       } catch {
@@ -200,7 +176,7 @@ const ReviewFormInner = ({
         name: formData.name,
         rating: formData.rating,
         text: formData.text,
-        userId,
+        userId: user?.id,
         ...(karaokeId && { karaokeId }),
       };
 
@@ -359,14 +335,15 @@ const ReviewFormInner = ({
             />
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="neon"
             disabled={submitting}
-            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-auto rounded-xl px-6 py-3 font-semibold"
           >
             <Send className="h-5 w-5" />
             {submitting ? "Submitting..." : "Submit Review"}
-          </button>
+          </Button>
         </form>
       </motion.div>
 
@@ -427,7 +404,7 @@ const ReviewFormInner = ({
                   }}
                   className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors ml-2"
                   title="Delete review"
-                  style={{ display: userId === review.userId ? "block" : "none" }}
+                  style={{ display: user?.id === review.userId ? "block" : "none" }}
                 >
                   <Trash2 className="h-5 w-5" />
                 </button>
@@ -454,17 +431,4 @@ const ReviewFormInner = ({
   );
 };
 
-export default function ReviewForm({ karaokeId }: { karaokeId?: string }) {
-  if (!clerkEnabled) {
-    return (
-      <ReviewFormInner
-        karaokeId={karaokeId}
-        isSignedIn={false}
-        isLoaded={true}
-        userId={null}
-      />
-    );
-  }
-
-  return <ReviewFormWithClerk karaokeId={karaokeId} />;
-}
+export default ReviewForm;

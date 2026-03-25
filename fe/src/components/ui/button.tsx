@@ -5,7 +5,7 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -22,7 +22,7 @@ const buttonVariants = cva(
  glass:
 "bg-white/10 backdrop-blur-xl border border-white/20 text-white hover:bg-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all",
           neon:
-"bg-primary text-primary-foreground shadow-[0_0_10px_theme(colors.primary)] hover:shadow-[0_0_25px_theme(colors.primary)] transition-all duration-300",
+"bg-primary text-primary-foreground shadow-[0_0_12px_theme(colors.primary),0_0_28px_rgba(255,47,146,0.18)] hover:-translate-y-0.5 hover:shadow-[0_0_18px_theme(colors.primary),0_0_34px_rgba(255,47,146,0.28)] active:translate-y-0 transition-all duration-300",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

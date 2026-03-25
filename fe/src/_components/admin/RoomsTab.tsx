@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import { motion } from "framer-motion"
 import { Plus, Trash2, LayoutGrid } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
+import { ImageUploadField } from "@/components/ui/image-upload-field"
 
 type Room = {
   _id: string
@@ -118,8 +119,16 @@ export function RoomsTab({ karaoke, onRefresh }: { karaoke: Karaoke; onRefresh: 
               <input type="number" value={form.capacity} onChange={e => setForm(p => ({ ...p, capacity: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-purple-500" placeholder="10" />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Зургийн URL *</label>
-              <input value={form.image} onChange={e => setForm(p => ({ ...p, image: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-purple-500 transition-all" placeholder="https://..." />
+              <ImageUploadField
+                label="Зураг *"
+                value={form.image ? [form.image] : []}
+                onChange={(images) =>
+                  setForm((prev) => ({ ...prev, image: images[0] ?? "" }))
+                }
+                theme="dark"
+                required
+                helperText="Өрөөний нэг зураг сонгоно."
+              />
             </div>
           </div>
           <div className="flex gap-4 pt-4">

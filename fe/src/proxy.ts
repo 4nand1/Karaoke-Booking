@@ -1,6 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
-import { clerkEnabled } from "@/lib/clerk-config"
 
 const isSignedInRoute = createRouteMatcher([
   "/profile(.*)",
@@ -11,7 +10,7 @@ const isSignedInRoute = createRouteMatcher([
 
 const isOwnerRoute = createRouteMatcher(["/admin/dashboard(.*)"])
 
-const clerkProtectedMiddleware = clerkMiddleware(async (auth, req) => {
+export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims, redirectToSignIn } = await auth()
 
   if (isOwnerRoute(req)) {
@@ -40,12 +39,6 @@ const clerkProtectedMiddleware = clerkMiddleware(async (auth, req) => {
 
   return NextResponse.next()
 })
-
-export default clerkEnabled
-  ? clerkProtectedMiddleware
-  : function proxy() {
-      return NextResponse.next()
-    }
 
 export const config = {
   matcher: [

@@ -46,8 +46,9 @@ type KaraokeCardViewModel = {
   location: string
   rating: number | null
   price: string
+  startingPrice: number | null
   hours: string
-  roomSize: "small" | "medium" | "large" | "vip" | "all"
+  roomSizes: Array<"small" | "large" | "vip">
   isOpenNow: boolean
   rooms: Array<{
     _id: string
@@ -84,15 +85,47 @@ function getIsOpenNow(openingTime?: string, closingTime?: string) {
   return currentMinutes >= open || currentMinutes <= close
 }
 
-function getRoomSize(roomTypes?: string[]): "small" | "medium" | "large" | "vip" | "all" {
-  const normalized = roomTypes?.map((type) => type.toLowerCase()) ?? []
+function getRoomSizes(
+  karaoke: Pick<KaraokeListing, "roomTypes" | "rooms" | "capacity">
+): Array<"small" | "large" | "vip"> {
+  const sizes = new Set<"small" | "large" | "vip">()
 
-  if (normalized.includes("vip")) return "vip"
-  if (normalized.includes("large")) return "large"
-  if (normalized.includes("medium")) return "medium"
-  if (normalized.includes("small")) return "small"
+  const addFromText = (value?: string | null, capacity?: number | null) => {
+    const normalized = value?.trim().toLowerCase() ?? ""
 
-  return "all"
+    if (normalized.includes("vip")) {
+      sizes.add("vip")
+      return
+    }
+
+    if (normalized.includes("large")) {
+      sizes.add("large")
+      return
+    }
+
+    if (normalized.includes("small")) {
+      sizes.add("small")
+      return
+    }
+
+    if (normalized.includes("medium")) {
+      sizes.add((capacity ?? karaoke.capacity ?? 0) >= 8 ? "large" : "small")
+      return
+    }
+
+    if (typeof capacity === "number") {
+      sizes.add(capacity >= 8 ? "large" : "small")
+    }
+  }
+
+  karaoke.roomTypes?.forEach((roomType) => addFromText(roomType, karaoke.capacity))
+  karaoke.rooms?.forEach((room) => addFromText(room.type, room.capacity))
+
+  if (sizes.size === 0 && typeof karaoke.capacity === "number") {
+    sizes.add(karaoke.capacity >= 8 ? "large" : "small")
+  }
+
+  return Array.from(sizes)
 }
 
 function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
@@ -113,11 +146,17 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
         : typeof lowestRoomPrice === "number" && Number.isFinite(lowestRoomPrice)
           ? `₮${lowestRoomPrice.toLocaleString()}/hr`
         : "Contact for price",
+    startingPrice:
+      typeof karaoke.pricePerHour === "number"
+        ? karaoke.pricePerHour
+        : typeof lowestRoomPrice === "number" && Number.isFinite(lowestRoomPrice)
+          ? lowestRoomPrice
+          : null,
     hours:
       karaoke.openingHours ||
       [karaoke.openingTime, karaoke.closingTime].filter(Boolean).join(" - ") ||
       "Hours not available",
-    roomSize: getRoomSize(karaoke.roomTypes),
+    roomSizes: getRoomSizes(karaoke),
     isOpenNow: getIsOpenNow(karaoke.openingTime, karaoke.closingTime),
     rooms: karaoke.rooms ?? [],
   }
@@ -125,8 +164,9 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
 
 const Index = () => {
   const [filters, setFilters] = useState<FilterValues>({
-    priceSort: "default",
-    minRating: "all",
+    minPrice: "",
+    maxPrice: "",
+    minRating: 0,
     openNow: false,
     roomSize: "all",
   })
@@ -167,10 +207,15 @@ const Index = () => {
   )
 
   const filteredSpots = useMemo(() => {
+    const minPrice = Number(filters.minPrice)
+    const maxPrice = Number(filters.maxPrice)
+    const hasMinPrice = filters.minPrice.trim() !== "" && !Number.isNaN(minPrice)
+    const hasMaxPrice = filters.maxPrice.trim() !== "" && !Number.isNaN(maxPrice)
+
     const filtered = mappedKaraokes.filter((spot) => {
       if (
-        filters.minRating !== "all" &&
-        (spot.rating === null || spot.rating < Number(filters.minRating))
+        filters.minRating > 0 &&
+        (spot.rating === null || spot.rating < filters.minRating)
       ) {
         return false
       }
@@ -179,38 +224,32 @@ const Index = () => {
         return false
       }
 
-      if (filters.roomSize !== "all" && spot.roomSize !== filters.roomSize) {
+      if (
+        filters.roomSize !== "all" &&
+        !spot.roomSizes.includes(filters.roomSize)
+      ) {
+        return false
+      }
+
+      if (hasMinPrice && (spot.startingPrice === null || spot.startingPrice < minPrice)) {
+        return false
+      }
+
+      if (hasMaxPrice && (spot.startingPrice === null || spot.startingPrice > maxPrice)) {
         return false
       }
 
       return true
     })
 
-    if (filters.priceSort === "lowToHigh") {
-      return [...filtered].sort((a, b) => {
-        const priceA = Number(a.price.replace(/[^\d.]/g, "")) || Number.MAX_SAFE_INTEGER
-        const priceB = Number(b.price.replace(/[^\d.]/g, "")) || Number.MAX_SAFE_INTEGER
-        return priceA - priceB
-      })
-    }
-
-    if (filters.priceSort === "highToLow") {
-      return [...filtered].sort((a, b) => {
-        const priceA = Number(a.price.replace(/[^\d.]/g, "")) || -1
-        const priceB = Number(b.price.replace(/[^\d.]/g, "")) || -1
-        return priceB - priceA
-      })
-    }
-
     return filtered
   }, [filters, mappedKaraokes])
-
-  const featuredSpots = useMemo(() => mappedKaraokes.slice(0, 3), [mappedKaraokes])
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <HeroCarousel />
+      <MapPreview />
 
       <section className="container mx-auto px-6 py-16">
         <motion.div
@@ -258,41 +297,6 @@ const Index = () => {
           </div>
         )}
       </section>
-
-      <MapPreview />
-
-      {featuredSpots.length > 0 && (
-        <section className="container mx-auto px-6 py-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="font-display text-3xl font-bold text-foreground md:text-4xl">
-              Featured <span className="text-primary">Karaoke</span>
-            </h2>
-            <p className="mt-2 text-muted-foreground">
-              Real listings highlighted from the current approved catalogue
-            </p>
-          </motion.div>
-
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredSpots.map((spot, i) => (
-              <KaraokeCard
-                key={`featured-${spot.id}`}
-                id={spot.id}
-                image={spot.image}
-                name={spot.name}
-                location={spot.location}
-                rating={spot.rating}
-                price={spot.price}
-                hours={spot.hours}
-                index={i}
-              />
-            ))}
-          </div>
-        </section>
-      )}
 <SiteReviews/>
     
       <Footer />

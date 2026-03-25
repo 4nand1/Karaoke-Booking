@@ -9,6 +9,7 @@ import Iridescence from "@/components/Iridescence"
 import { apiBaseUrl } from "@/lib/api-url"
 import { clerkEnabled } from "@/lib/clerk-config"
 import { api } from "@/lib/axios"
+import { ImageUploadField } from "@/components/ui/image-upload-field"
 
 type KaraokeForm = {
   karaokeName: string
@@ -22,7 +23,7 @@ type KaraokeForm = {
   openingTime: string
   closingTime: string
   amenities: string
-  images: string
+  images: string[]
   rulesPolicies: string
   latitude: string
   longitude: string
@@ -83,12 +84,11 @@ const initialForm: KaraokeForm = {
   openingTime: "",
   closingTime: "",
   amenities: "",
-  images: "",
+  images: [],
   rulesPolicies: "",
   latitude: "",
   longitude: "",
 }
-
 export default function RegisterKaraokePage() {
   const router = useRouter()
   const { getToken, isLoaded } = useAuth()
@@ -303,10 +303,7 @@ export default function RegisterKaraokePage() {
           .split(",")
           .map((item) => item.trim())
           .filter(Boolean),
-        images: form.images
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
+        images: form.images,
         rulesPolicies: form.rulesPolicies.trim(),
         latitude: form.latitude ? Number(form.latitude) : null,
         longitude: form.longitude ? Number(form.longitude) : null,
@@ -696,17 +693,23 @@ export default function RegisterKaraokePage() {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className={labelStyle}>Images</label>
-                      <input
-                        name="images"
+                      <ImageUploadField
+                        label="Images"
                         value={form.images}
-                        onChange={handleChange}
-                        placeholder="https://..., https://..."
-                        className={inputStyle}
+                        onChange={(images) => {
+                          setForm((prev) => ({ ...prev, images }))
+                          if (fieldErrors.images) {
+                            setFieldErrors((prev) => {
+                              const next = { ...prev }
+                              delete next.images
+                              return next
+                            })
+                          }
+                        }}
+                        multiple
+                        theme="dark"
+                        helperText="Choose karaoke photos from your device instead of pasting URLs."
                       />
-                      <p className="mt-2 ml-1 text-xs text-white/45">
-                        Paste one or more image URLs separated by commas.
-                      </p>
                     </div>
 
                     <div className="md:col-span-2">
@@ -733,7 +736,10 @@ export default function RegisterKaraokePage() {
                     <ReviewItem label="Description" value={form.description} />
                     <ReviewItem label="Opening hours" value={form.openingHours} />
                     <ReviewItem label="Amenities" value={form.amenities} />
-                    <ReviewItem label="Images" value={form.images} />
+                    <ReviewItem
+                      label="Images"
+                      value={form.images.length > 0 ? form.images.join(", ") : ""}
+                    />
                     <ReviewItem label="Rules / Policies" value={form.rulesPolicies} />
                     <ReviewItem
                       label="Coordinates"

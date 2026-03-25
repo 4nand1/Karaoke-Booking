@@ -13,15 +13,17 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 
 export type FilterValues = {
-  priceSort: "default" | "lowToHigh" | "highToLow";
-  minRating: "all" | "4.0" | "4.5" | "4.8";
+  minPrice: string;
+  maxPrice: string;
+  minRating: 0 | 1 | 2 | 3 | 4 | 5;
   openNow: boolean;
-  roomSize: "all" | "small" | "medium" | "large" | "vip";
+  roomSize: "all" | "small" | "large" | "vip";
 };
 
 const defaultFilters: FilterValues = {
-  priceSort: "default",
-  minRating: "all",
+  minPrice: "",
+  maxPrice: "",
+  minRating: 0,
   openNow: false,
   roomSize: "all",
 };
@@ -52,8 +54,9 @@ const FilterBar = ({
   };
 
   const hasActiveFilters =
-    filters.priceSort !== "default" ||
-    filters.minRating !== "all" ||
+    filters.minPrice.trim() !== "" ||
+    filters.maxPrice.trim() !== "" ||
+    filters.minRating > 0 ||
     filters.openNow ||
     filters.roomSize !== "all";
 
@@ -98,20 +101,26 @@ const FilterBar = ({
               <DollarSign className="h-4 w-4 text-primary" />
               Price
             </label>
-            <select
-              value={filters.priceSort}
-              onChange={(e) =>
-                updateFilter(
-                  "priceSort",
-                  e.target.value as FilterValues["priceSort"],
-                )
-              }
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary"
-            >
-              <option value="default">Default</option>
-              <option value="lowToHigh">Low to high</option>
-              <option value="highToLow">High to low</option>
-            </select>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={filters.minPrice}
+                onChange={(e) => updateFilter("minPrice", e.target.value)}
+                placeholder="Min"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary"
+              />
+              <input
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={filters.maxPrice}
+                onChange={(e) => updateFilter("maxPrice", e.target.value)}
+                placeholder="Max"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary"
+              />
+            </div>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-background/60 p-4">
@@ -119,21 +128,40 @@ const FilterBar = ({
               <Star className="h-4 w-4 text-primary" />
               Rating
             </label>
-            <select
-              value={filters.minRating}
-              onChange={(e) =>
-                updateFilter(
-                  "minRating",
-                  e.target.value as FilterValues["minRating"],
-                )
-              }
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary"
-            >
-              <option value="all">All ratings</option>
-              <option value="4.0">4.0+</option>
-              <option value="4.5">4.5+</option>
-              <option value="4.8">4.8+</option>
-            </select>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: 5 }, (_, index) => {
+                const starValue = index + 1 as FilterValues["minRating"];
+                const active = starValue <= filters.minRating;
+
+                return (
+                  <button
+                    key={starValue}
+                    type="button"
+                    onClick={() =>
+                      updateFilter(
+                        "minRating",
+                        filters.minRating === starValue ? 0 : starValue,
+                      )
+                    }
+                    className="rounded-full p-1 transition hover:scale-105"
+                    aria-label={`Minimum ${starValue} star rating`}
+                  >
+                    <Star
+                      className={`h-5 w-5 ${
+                        active
+                          ? "fill-primary text-primary"
+                          : "text-muted-foreground/50"
+                      }`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {filters.minRating > 0
+                ? `${filters.minRating} stars and up`
+                : "All ratings"}
+            </p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-background/60 p-4">
@@ -141,22 +169,22 @@ const FilterBar = ({
               <Users className="h-4 w-4 text-primary" />
               Room size
             </label>
-            <select
-              value={filters.roomSize}
-              onChange={(e) =>
-                updateFilter(
-                  "roomSize",
-                  e.target.value as FilterValues["roomSize"],
-                )
-              }
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary"
-            >
-              <option value="all">All sizes</option>
-              <option value="small">Small</option>
-              <option value="medium">Medium</option>
-              <option value="large">Large</option>
-              <option value="vip">VIP</option>
-            </select>
+            <div className="flex flex-wrap gap-2">
+              {(["all", "small", "large", "vip"] as const).map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => updateFilter("roomSize", size)}
+                  className={`rounded-full border px-3 py-2 text-sm font-medium capitalize transition ${
+                    filters.roomSize === size
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background text-foreground"
+                  }`}
+                >
+                  {size === "all" ? "All sizes" : size}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-background/60 p-4">
@@ -187,18 +215,15 @@ const FilterBar = ({
 
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-2">
-          {filters.priceSort !== "default" && (
+          {(filters.minPrice.trim() !== "" || filters.maxPrice.trim() !== "") && (
             <div className="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
-              Price:{" "}
-              {filters.priceSort === "lowToHigh"
-                ? "Low to high"
-                : "High to low"}
+              Price: {filters.minPrice.trim() || "0"} - {filters.maxPrice.trim() || "Any"}
             </div>
           )}
 
-          {filters.minRating !== "all" && (
+          {filters.minRating > 0 && (
             <div className="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
-              Rating: {filters.minRating}+
+              Rating: {filters.minRating} stars+
             </div>
           )}
 
