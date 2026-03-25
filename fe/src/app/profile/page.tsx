@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
+import { apiRootUrl } from "@/lib/api-url"
 
 type ProfileResponse = {
   profile?: {
@@ -17,7 +18,7 @@ async function getProfile() {
 
   const token = await getToken()
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me/profile`, {
+  const res = await fetch(`${apiRootUrl}/api/me/profile`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

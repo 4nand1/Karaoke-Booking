@@ -193,10 +193,10 @@ export default function MyBookingsPage() {
                         </p>
                         {booking.karaokeId ? (
                           <Link
-                            href={`/karaoke/${booking.karaokeId}`}
+                            href={`/book/${booking.karaokeId}`}
                             className="inline-flex rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-accent"
                           >
-                            View karaoke
+                            View booking page
                           </Link>
                         ) : null}
                       </div>

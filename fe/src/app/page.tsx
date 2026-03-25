@@ -8,8 +8,10 @@ import MapPreview from "@/_components/client/MapPreviewClient"
 import ReviewForm from "@/_components/client/ReviewForm"
 import Footer from "@/_components/client/Footer"
 import { motion } from "framer-motion"
-import { useEffect, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { apiRootUrl } from "@/lib/api-url"
+import { useLanguage } from "@/lib/language"
 import SiteReviews from "@/_components/client/SiteReviews"
 
 type KaraokeListing = {
@@ -58,6 +60,11 @@ type KaraokeCardViewModel = {
     capacity: number
     image: string
   }>
+}
+
+type ReviewRecord = {
+  karaokeId?: string
+  rating?: number
 }
 
 const FALLBACK_IMAGE = "/karaoke-card-1.jpg"
@@ -162,7 +169,9 @@ function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
   }
 }
 
-const Index = () => {
+const IndexContent = () => {
+  const searchParams = useSearchParams()
+  const { language } = useLanguage()
   const [filters, setFilters] = useState<FilterValues>({
     minPrice: "",
     maxPrice: "",
@@ -171,8 +180,34 @@ const Index = () => {
     roomSize: "all",
   })
   const [karaokes, setKaraokes] = useState<KaraokeListing[]>([])
+  const [reviews, setReviews] = useState<ReviewRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const searchQuery = searchParams.get("q")?.trim().toLowerCase() ?? ""
+
+  const copy = useMemo(
+    () =>
+      language === "MN"
+        ? {
+            sectionTitlePrefix: "Онцлох Караоке",
+            sectionTitleAccent: "Газрууд",
+            sectionDescription: "Платформ дээр баталгаажсан, жинхэнэ эзэмшигчдийн listing-үүд",
+            loading: "Караоке жагсаалтыг ачаалж байна...",
+            loadError: "Караоке жагсаалт ачаалж чадсангүй",
+            noResults: "Илэрц олдсонгүй.",
+            searchResults: `"${searchParams.get("q")}" хайлтын илэрц`,
+          }
+        : {
+            sectionTitlePrefix: "Popular Karaoke",
+            sectionTitleAccent: "Spots",
+            sectionDescription: "Approved karaoke listings from real owners on the platform",
+            loading: "Loading karaoke listings...",
+            loadError: "Failed to load karaoke listings",
+            noResults: "No karaoke listings found.",
+            searchResults: `Search results for "${searchParams.get("q")}"`,
+          },
+    [language, searchParams]
+  )
 
   useEffect(() => {
     const fetchKaraokes = async () => {
@@ -180,30 +215,80 @@ const Index = () => {
         setLoading(true)
         setError("")
 
-        const response = await fetch(`${apiRootUrl}/karaoke`, {
-          cache: "no-store",
-        })
+        const [karaokeResponse, reviewResponse] = await Promise.all([
+          fetch(`${apiRootUrl}/karaoke`, {
+            cache: "no-store",
+          }),
+          fetch(`${apiRootUrl}/api/reviews`, {
+            cache: "no-store",
+          }),
+        ])
 
-        if (!response.ok) {
-          throw new Error(`Failed to load karaokes: ${response.status}`)
+        if (!karaokeResponse.ok) {
+          throw new Error(`Failed to load karaokes: ${karaokeResponse.status}`)
         }
 
-        const data = (await response.json()) as { karaokes?: KaraokeListing[] }
-        setKaraokes(Array.isArray(data.karaokes) ? data.karaokes : [])
+        const karaokeData = (await karaokeResponse.json()) as {
+          karaokes?: KaraokeListing[]
+        }
+        setKaraokes(Array.isArray(karaokeData.karaokes) ? karaokeData.karaokes : [])
+
+        if (reviewResponse.ok) {
+          const reviewData = (await reviewResponse.json()) as {
+            data?: ReviewRecord[]
+          }
+          setReviews(Array.isArray(reviewData.data) ? reviewData.data : [])
+        } else {
+          setReviews([])
+        }
       } catch (err) {
         console.error("Failed to fetch karaokes:", err)
-        setError("Failed to load karaoke listings")
+        setError(copy.loadError)
       } finally {
         setLoading(false)
       }
     }
 
     fetchKaraokes()
-  }, [])
+  }, [copy.loadError])
+
+  const ratingByKaraokeId = useMemo(() => {
+    const totals = new Map<string, { sum: number; count: number }>()
+
+    reviews.forEach((review) => {
+      if (
+        typeof review.karaokeId !== "string" ||
+        typeof review.rating !== "number" ||
+        review.rating < 1 ||
+        review.rating > 5
+      ) {
+        return
+      }
+
+      const current = totals.get(review.karaokeId) ?? { sum: 0, count: 0 }
+      current.sum += review.rating
+      current.count += 1
+      totals.set(review.karaokeId, current)
+    })
+
+    return totals
+  }, [reviews])
 
   const mappedKaraokes = useMemo(
-    () => karaokes.map(mapKaraokeToCard),
-    [karaokes]
+    () =>
+      karaokes.map((karaoke) => {
+        const reviewSummary = ratingByKaraokeId.get(karaoke._id)
+        const computedRating =
+          reviewSummary && reviewSummary.count > 0
+            ? Number((reviewSummary.sum / reviewSummary.count).toFixed(1))
+            : karaoke.rating ?? null
+
+        return mapKaraokeToCard({
+          ...karaoke,
+          rating: computedRating,
+        })
+      }),
+    [karaokes, ratingByKaraokeId]
   )
 
   const filteredSpots = useMemo(() => {
@@ -239,11 +324,27 @@ const Index = () => {
         return false
       }
 
+      if (searchQuery) {
+        const searchableFields = [
+          spot.name,
+          spot.location,
+          spot.hours,
+          ...spot.roomSizes,
+          ...spot.rooms.map((room) => `${room.name} ${room.type}`),
+        ]
+          .join(" ")
+          .toLowerCase()
+
+        if (!searchableFields.includes(searchQuery)) {
+          return false
+        }
+      }
+
       return true
     })
 
     return filtered
-  }, [filters, mappedKaraokes])
+  }, [filters, mappedKaraokes, searchQuery])
 
   return (
     <div className="min-h-screen bg-background">
@@ -258,18 +359,24 @@ const Index = () => {
           viewport={{ once: true }}
         >
           <h2 className="font-display text-3xl font-bold text-foreground md:text-4xl">
-            Popular Karaoke <span className="text-primary">Spots</span>
+            {copy.sectionTitlePrefix} <span className="text-primary">{copy.sectionTitleAccent}</span>
           </h2>
           <p className="mt-2 text-muted-foreground">
-            Approved karaoke listings from real owners on the platform
+            {copy.sectionDescription}
           </p>
         </motion.div>
+
+        {searchQuery && (
+          <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-foreground">
+            {copy.searchResults}
+          </div>
+        )}
 
         <FilterBar onChange={setFilters} />
 
         {loading ? (
           <div className="mt-8 rounded-2xl border border-border bg-card p-6 text-muted-foreground">
-            Loading karaoke listings...
+            {copy.loading}
           </div>
         ) : error ? (
           <div className="mt-8 rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-red-400">
@@ -277,7 +384,7 @@ const Index = () => {
           </div>
         ) : filteredSpots.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-border bg-card p-6 text-muted-foreground">
-            No karaoke listings found.
+            {copy.noResults}
           </div>
         ) : (
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -304,4 +411,23 @@ const Index = () => {
   )
 }
 
-export default Index
+const IndexFallback = () => (
+  <div className="min-h-screen bg-background">
+    <Navbar />
+    <HeroCarousel />
+    <section className="container mx-auto px-6 py-16">
+      <div className="rounded-2xl border border-border bg-card p-6 text-muted-foreground">
+        Loading karaoke listings...
+      </div>
+    </section>
+    <Footer />
+  </div>
+)
+
+export default function Index() {
+  return (
+    <Suspense fallback={<IndexFallback />}>
+      <IndexContent />
+    </Suspense>
+  )
+}

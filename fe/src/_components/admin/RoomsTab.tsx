@@ -47,6 +47,14 @@ const emptyForm: FormState = {
   image: "",
 }
 
+function formatNumberInput(value: string) {
+  const digits = value.replace(/\D/g, "")
+
+  if (!digits) return ""
+
+  return Number(digits).toLocaleString()
+}
+
 export function RoomsTab({
   karaoke,
   onRefresh,
@@ -93,7 +101,7 @@ export function RoomsTab({
           rooms: [
             {
               ...form,
-              price: Number(form.price),
+              price: Number(form.price.replace(/,/g, "")),
               capacity: Number(form.capacity),
             },
           ],
@@ -132,7 +140,7 @@ export function RoomsTab({
           },
           body: JSON.stringify({
             ...form,
-            price: Number(form.price),
+            price: Number(form.price.replace(/,/g, "")),
             capacity: Number(form.capacity),
           }),
         }
@@ -178,7 +186,7 @@ export function RoomsTab({
     setForm({
       name: room.name,
       type: room.type,
-      price: String(room.price),
+      price: room.price.toLocaleString(),
       capacity: String(room.capacity),
       image: room.image,
     })
@@ -344,9 +352,15 @@ export function RoomsTab({
             <div>
               <label className={labelClassName}>Price per hour</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={form.price}
-                onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    price: formatNumberInput(e.target.value),
+                  }))
+                }
                 className={inputClassName}
                 placeholder="50000"
               />

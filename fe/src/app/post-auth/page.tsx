@@ -82,7 +82,8 @@ export default function PostAuthPage() {
 
         const shouldSyncRole =
           !existingRole ||
-          (selectedRole === "admin" && existingRole !== "karaoke_owner")
+          (selectedRole === "admin" && existingRole !== "karaoke_owner") ||
+          (selectedRole === "user" && existingRole !== "customer")
 
         if (shouldSyncRole) {
           await api.post(
@@ -118,7 +119,7 @@ export default function PostAuthPage() {
         }
 
         if (profile?.role === "karaoke_owner") {
-          router.replace("/admin/dashboard")
+          router.replace("/admin")
           return
         }
 

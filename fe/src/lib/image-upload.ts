@@ -27,8 +27,8 @@ async function loadImage(dataUrl: string) {
 
 export async function optimizeImageFile(
   file: File,
-  maxDimension = 1600,
-  quality = 0.82
+  maxDimension = 1280,
+  quality = 0.72
 ) {
   const dataUrl = await fileToDataUrl(file)
 
@@ -57,7 +57,15 @@ export async function optimizeImageFile(
   context.drawImage(image, 0, 0, canvas.width, canvas.height)
 
   const outputType = file.type === "image/png" ? "image/png" : "image/jpeg"
-  return canvas.toDataURL(outputType, quality)
+  const optimizedDataUrl = canvas.toDataURL(outputType, quality)
+
+  if (optimizedDataUrl.length > 1_500_000) {
+    throw new Error(
+      "Image is still too large after compression. Please choose a smaller image."
+    )
+  }
+
+  return optimizedDataUrl
 }
 
 export async function imageFilesToDataUrls(files: File[]) {

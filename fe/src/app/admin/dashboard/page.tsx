@@ -31,6 +31,8 @@ type KaraokeRecord = {
   amenities?: string[]
   images?: string[]
   rulesPolicies?: string
+  latitude?: number | null
+  longitude?: number | null
   approvalStatus?: "pending" | "approved" | "rejected" | "draft"
   rooms?: Array<{
     _id: string
@@ -110,11 +112,11 @@ export default async function AdminDashboardPage() {
   const data = await getAdminData()
 
   if (!data?.profile) {
-    redirect("/")
+    redirect("/my-bookings")
   }
 
   if (data.profile.role !== "karaoke_owner") {
-    redirect("/")
+    redirect("/my-bookings")
   }
 
   return (

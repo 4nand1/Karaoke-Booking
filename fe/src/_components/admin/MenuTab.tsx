@@ -5,7 +5,6 @@ import { useAuth } from "@clerk/nextjs"
 import { Edit3, Plus, Soup, Trash2 } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
 import { ImageUploadField } from "@/components/ui/image-upload-field"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 type MenuItem = {
@@ -45,6 +44,14 @@ const emptyForm: FormState = {
   price: "",
   description: "",
   image: "",
+}
+
+function formatNumberInput(value: string) {
+  const digits = value.replace(/\D/g, "")
+
+  if (!digits) return ""
+
+  return Number(digits).toLocaleString()
 }
 
 export function MenuTab({
@@ -87,7 +94,7 @@ export function MenuTab({
         body: JSON.stringify({
           name: form.name,
           category: form.category,
-          price: Number(form.price),
+          price: Number(form.price.replace(/,/g, "")),
           description: form.description,
           image: form.image,
         }),
@@ -113,7 +120,7 @@ export function MenuTab({
     setForm({
       name: item.name,
       category: item.category,
-      price: String(item.price),
+      price: item.price.toLocaleString(),
       description: item.description ?? "",
       image: item.image ?? "",
     })
@@ -138,7 +145,7 @@ export function MenuTab({
           body: JSON.stringify({
             name: form.name,
             category: form.category,
-            price: Number(form.price),
+            price: Number(form.price.replace(/,/g, "")),
             description: form.description,
             image: form.image,
           }),
@@ -223,7 +230,6 @@ export function MenuTab({
                       {groupedMenu[category].length} items
                     </p>
                   </div>
-                  <Badge variant="outline">{category}</Badge>
                 </div>
 
                 <div className="space-y-3">
@@ -333,9 +339,15 @@ export function MenuTab({
             <div>
               <label className={labelClassName}>Price</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={form.price}
-                onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    price: formatNumberInput(e.target.value),
+                  }))
+                }
                 className={inputClassName}
                 placeholder="0"
               />

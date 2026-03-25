@@ -7,6 +7,7 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/axios";
 import { Button } from "@/components/ui/button";
+import { clerkEnabled } from "@/lib/clerk-config";
 
 interface Review {
   _id?: string;
@@ -57,8 +58,21 @@ const formatReview = (review: ReviewApiResponse): Review => {
   };
 };
 
-const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
-  const { isSignedIn, isLoaded, user } = useUser();
+type ReviewFormContentProps = {
+  karaokeId?: string;
+  isLoaded: boolean;
+  isSignedIn: boolean;
+  user?: {
+    id?: string | null;
+  } | null;
+};
+
+const ReviewFormContent = ({
+  karaokeId,
+  isLoaded,
+  isSignedIn,
+  user,
+}: ReviewFormContentProps) => {
   const router = useRouter();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,7 +149,7 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
       try {
         await api.delete(`/reviews/${id}`, {
           data: {
-            userId: user?.id,
+            userId: user?.id ?? undefined,
           },
         });
       } catch {
@@ -176,7 +190,7 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
         name: formData.name,
         rating: formData.rating,
         text: formData.text,
-        userId: user?.id,
+        userId: user?.id ?? undefined,
         ...(karaokeId && { karaokeId }),
       };
 
@@ -429,6 +443,36 @@ const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
       </div>
     </section>
   );
+};
+
+const ReviewFormWithClerk = ({ karaokeId }: { karaokeId?: string }) => {
+  const { isSignedIn, isLoaded, user } = useUser();
+
+  return (
+    <ReviewFormContent
+      karaokeId={karaokeId}
+      isLoaded={Boolean(isLoaded)}
+      isSignedIn={Boolean(isSignedIn)}
+      user={user}
+    />
+  );
+};
+
+const ReviewFormWithoutClerk = ({ karaokeId }: { karaokeId?: string }) => (
+  <ReviewFormContent
+    karaokeId={karaokeId}
+    isLoaded={true}
+    isSignedIn={false}
+    user={null}
+  />
+);
+
+const ReviewForm = ({ karaokeId }: { karaokeId?: string }) => {
+  if (!clerkEnabled) {
+    return <ReviewFormWithoutClerk karaokeId={karaokeId} />;
+  }
+
+  return <ReviewFormWithClerk karaokeId={karaokeId} />;
 };
 
 export default ReviewForm;

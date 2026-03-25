@@ -7,6 +7,7 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/axios";
 import { Button } from "@/components/ui/button";
+import { clerkEnabled } from "@/lib/clerk-config";
 
 interface SiteReview {
   _id?: string;
@@ -54,8 +55,19 @@ const formatReview = (review: ReviewApiResponse): SiteReview => {
   };
 };
 
-const SiteReviews = () => {
-  const { isSignedIn, isLoaded, user } = useUser();
+type SiteReviewsContentProps = {
+  isLoaded: boolean;
+  isSignedIn: boolean;
+  user?: {
+    id?: string | null;
+  } | null;
+};
+
+const SiteReviewsContent = ({
+  isLoaded,
+  isSignedIn,
+  user,
+}: SiteReviewsContentProps) => {
   const router = useRouter();
   const [reviews, setReviews] = useState<SiteReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +158,7 @@ const SiteReviews = () => {
         name: formData.name,
         rating: formData.rating,
         text: formData.text,
-        userId: user?.id,
+        userId: user?.id ?? undefined,
       };
 
       let newReview: SiteReview;
@@ -394,6 +406,30 @@ const SiteReviews = () => {
       </div>
     </section>
   );
+};
+
+const SiteReviewsWithClerk = () => {
+  const { isSignedIn, isLoaded, user } = useUser();
+
+  return (
+    <SiteReviewsContent
+      isLoaded={Boolean(isLoaded)}
+      isSignedIn={Boolean(isSignedIn)}
+      user={user}
+    />
+  );
+};
+
+const SiteReviewsWithoutClerk = () => (
+  <SiteReviewsContent isLoaded={true} isSignedIn={false} user={null} />
+);
+
+const SiteReviews = () => {
+  if (!clerkEnabled) {
+    return <SiteReviewsWithoutClerk />;
+  }
+
+  return <SiteReviewsWithClerk />;
 };
 
 export default SiteReviews;

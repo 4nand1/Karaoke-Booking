@@ -11,8 +11,14 @@ type CreateCheckoutSessionBody = {
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY?.trim()
 
-  if (!secretKey) {
-    throw new Error("Missing STRIPE_SECRET_KEY in backend .env")
+  if (
+    !secretKey ||
+    secretKey === "sk_test_your_stripe_secret_key" ||
+    secretKey.includes("your_stripe_secret_key")
+  ) {
+    throw new Error(
+      "Stripe is not configured. Replace STRIPE_SECRET_KEY in be/.env with a real Stripe secret key."
+    )
   }
 
   return new Stripe(secretKey)

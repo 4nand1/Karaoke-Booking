@@ -3,9 +3,11 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 const isSignedInRoute = createRouteMatcher([
   "/profile(.*)",
   "/my-bookings(.*)",
-  "/register-karaoke(.*)",
   "/admin(.*)",
+  "/admin/dashboard(.*)",
 ])
+
+const isOwnerRoute = createRouteMatcher(["/admin(.*)", "/admin/dashboard(.*)"])
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, redirectToSignIn } = await auth()

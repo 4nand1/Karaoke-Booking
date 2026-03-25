@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import {
   Activity,
+  ArrowLeft,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   LayoutDashboard,
   MapPin,
@@ -15,6 +17,7 @@ import {
   Users,
 } from "lucide-react"
 import { apiRootUrl } from "@/lib/api-url"
+import Link from "next/link"
 import AdminRegister, { type RegisteredKaraoke } from "@/_components/admin/AdminRegister"
 import { RoomsTab } from "@/_components/admin/RoomsTab"
 import { MenuTab } from "@/_components/admin/MenuTab"
@@ -69,6 +72,7 @@ export function UnifiedAdminDashboard({
   )
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [refreshError, setRefreshError] = useState("")
+  const [bookingError, setBookingError] = useState("")
   const [bookings, setBookings] = useState<Booking[]>([])
   const [isBookingsLoading, setIsBookingsLoading] = useState(false)
 
@@ -103,7 +107,7 @@ export function UnifiedAdminDashboard({
         upcomingCount: roomBookings.length,
         bookedTimes: roomBookings.slice(0, 3).flatMap((booking) =>
           (booking.bookingSlots?.length ? booking.bookingSlots : [booking.bookingTime]).map(
-            (slot) => `${booking.bookingDate} · ${slot}`
+            (slot) => `${booking.bookingDate} - ${slot}`
           )
         ),
       }
@@ -115,6 +119,21 @@ export function UnifiedAdminDashboard({
       setSelectedKaraokeId(karaokes[0]._id)
     }
   }, [karaokes, selectedKaraoke])
+
+  const formattedSelectedHours = useMemo(() => {
+    if (!selectedKaraoke) return "-"
+
+    const openingHours = selectedKaraoke.openingHours?.trim()
+
+    if (openingHours) {
+      return openingHours
+        .replace(/\s*-\s*/g, " - ")
+        .replace(/\s+/g, " ")
+        .trim()
+    }
+
+    return `${selectedKaraoke.openingTime} - ${selectedKaraoke.closingTime}`
+  }, [selectedKaraoke])
 
   async function refreshKaraokes(nextSelectedId?: string) {
     setIsRefreshing(true)
@@ -173,10 +192,12 @@ export function UnifiedAdminDashboard({
   const refreshBookings = useCallback(async () => {
     if (!selectedKaraoke?.ownerClerkUserId) {
       setBookings([])
+      setBookingError("")
       return
     }
 
     setIsBookingsLoading(true)
+    setBookingError("")
 
     try {
       const res = await fetch(
@@ -194,7 +215,7 @@ export function UnifiedAdminDashboard({
 
       setBookings(Array.isArray(data.data) ? (data.data as Booking[]) : [])
     } catch (error) {
-      setRefreshError(
+      setBookingError(
         error instanceof Error ? error.message : "Failed to load booking data."
       )
     } finally {
@@ -276,9 +297,21 @@ export function UnifiedAdminDashboard({
       <section className="overflow-hidden rounded-[36px] border border-slate-200 bg-[linear-gradient(135deg,#f8fafc_0%,#ffffff_55%,#eef2ff_100%)] shadow-[0_30px_120px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-[linear-gradient(135deg,#020617_0%,#0f172a_55%,#111827_100%)]">
         <div className="grid gap-8 p-6 md:p-8 xl:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <Badge variant="outline" className="border-slate-300 bg-white/70 dark:border-slate-700 dark:bg-slate-900/70">
-              Operations Workspace
-            </Badge>
+            <div className="mb-8 flex flex-col items-start gap-4">
+              <Button
+                asChild
+                variant="outline"
+                className="rounded-2xl border-slate-300 bg-white/80 text-slate-900 hover:bg-white dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:bg-slate-900"
+              >
+                <Link href="/">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to main page
+                </Link>
+              </Button>
+              <Badge variant="outline" className="border-slate-300 bg-white/70 dark:border-slate-700 dark:bg-slate-900/70">
+                Operations Workspace
+              </Badge>
+            </div>
             <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">
               Admin dashboard for managing your karaoke
             </h1>
@@ -404,22 +437,25 @@ export function UnifiedAdminDashboard({
                   connected to the right venue.
                 </CardDescription>
               </div>
-              <select
-                value={selectedKaraoke?._id ?? ""}
-                onChange={(event) => setSelectedKaraokeId(event.target.value)}
-                className="min-w-[260px] rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                disabled={karaokes.length === 0}
-              >
-                {karaokes.length === 0 ? (
-                  <option value="">Register a karaoke first</option>
-                ) : (
-                  karaokes.map((karaoke) => (
-                    <option key={karaoke._id} value={karaoke._id}>
-                      {karaoke.name}
-                    </option>
-                  ))
-                )}
-              </select>
+              <div className="relative min-w-[260px]">
+                <select
+                  value={selectedKaraoke?._id ?? ""}
+                  onChange={(event) => setSelectedKaraokeId(event.target.value)}
+                  className="min-w-[260px] appearance-none rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-11 text-sm text-slate-900 outline-none transition focus:border-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  disabled={karaokes.length === 0}
+                >
+                  {karaokes.length === 0 ? (
+                    <option value="">Register a karaoke first</option>
+                  ) : (
+                    karaokes.map((karaoke) => (
+                      <option key={karaoke._id} value={karaoke._id}>
+                        {karaoke.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
             </div>
           </CardHeader>
 
@@ -434,12 +470,7 @@ export function UnifiedAdminDashboard({
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                 Hours
               </p>
-              <p className="mt-2 font-semibold">
-                {selectedKaraoke
-                  ? selectedKaraoke.openingHours ||
-                    `${selectedKaraoke.openingTime} - ${selectedKaraoke.closingTime}`
-                  : "-"}
-              </p>
+              <p className="mt-2 font-semibold">{formattedSelectedHours}</p>
             </div>
             <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-950">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
@@ -525,7 +556,11 @@ export function UnifiedAdminDashboard({
           <CardTitle>1. Register Karaoke</CardTitle>
         </CardHeader>
         <CardContent>
-          <AdminRegister embedded onRegistered={handleRegistered} />
+          <AdminRegister
+            embedded
+            currentKaraoke={selectedKaraoke}
+            onRegistered={handleRegistered}
+          />
         </CardContent>
       </Card>
 
@@ -608,6 +643,11 @@ export function UnifiedAdminDashboard({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {bookingError ? (
+            <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
+              {bookingError}
+            </p>
+          ) : null}
           {!selectedKaraoke ? (
             <div className="rounded-3xl bg-slate-50 p-5 text-sm text-slate-500 dark:bg-slate-950 dark:text-slate-400">
               Register a karaoke first to view live bookings.
@@ -633,7 +673,7 @@ export function UnifiedAdminDashboard({
                       <Badge variant="outline">{booking.status}</Badge>
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {booking.roomName} · {booking.roomType}
+                      {booking.roomName} - {booking.roomType}
                     </p>
                   </div>
 

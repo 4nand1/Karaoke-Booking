@@ -1,8 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Sun,
@@ -23,6 +23,9 @@ import { SignOutButton, useAuth, useUser } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { api } from "@/lib/axios"
+import { apiRootUrl } from "@/lib/api-url"
+import { clerkEnabled } from "@/lib/clerk-config"
+import { useLanguage } from "@/lib/language"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -44,10 +47,50 @@ type ProfileResponse = {
   } | null
 }
 
-export default function Navbar() {
+type NavbarContentProps = {
+  getToken?: (() => Promise<string | null>) | null
+  isAuthLoaded: boolean
+  isSignedIn: boolean
+  user?: {
+    id?: string | null
+    firstName?: string | null
+    publicMetadata?: PublicMetadata
+  } | null
+}
+
+type SearchListing = {
+  _id: string
+  name: string
+  address?: string
+  city?: string
+}
+
+function getSuggestionScore(listing: SearchListing, query: string) {
+  const normalizedQuery = query.trim().toLowerCase()
+
+  if (!normalizedQuery) return Number.POSITIVE_INFINITY
+
+  const name = listing.name.toLowerCase()
+  const location = `${listing.address ?? ""} ${listing.city ?? ""}`.trim().toLowerCase()
+  const combined = `${name} ${location}`.trim()
+
+  if (name.startsWith(normalizedQuery)) return 0
+  if (name.split(/\s+/).some((word) => word.startsWith(normalizedQuery))) return 1
+  if (combined.includes(normalizedQuery)) return 2
+
+  return Number.POSITIVE_INFINITY
+}
+
+function NavbarContent({
+  getToken,
+  isAuthLoaded,
+  isSignedIn,
+  user,
+}: NavbarContentProps) {
   const router = useRouter()
-  const { user, isSignedIn } = useUser()
-  const { getToken, isLoaded } = useAuth()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const { language, toggleLanguage } = useLanguage()
 
   const [dark, setDark] = useState(() => {
     if (typeof window === "undefined") return false
@@ -60,26 +103,106 @@ export default function Navbar() {
     return window.matchMedia("(prefers-color-scheme: dark)").matches
   })
   const [scrolled, setScrolled] = useState(false)
-  const [language, setLanguage] = useState<"EN" | "MN">(() => {
-    if (typeof window === "undefined") return "EN"
-
-    const savedLanguage = localStorage.getItem("language")
-    return savedLanguage === "MN" ? "MN" : "EN"
-  })
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "")
+  const [searchListings, setSearchListings] = useState<SearchListing[]>([])
   const [profileMetadata, setProfileMetadata] = useState<PublicMetadata | null>(null)
+  const [isProfileResolved, setIsProfileResolved] = useState(false)
   const hasHydrated = useRef(false)
+
+  const copy = useMemo(
+    () =>
+      language === "MN"
+        ? {
+            searchPlaceholder: "Караоке хайх...",
+            searchAriaLabel: "Хайлт нээх",
+            mapAriaLabel: "Газрын зураг нээх",
+            account: "Бүртгэл",
+            greeting: `Сайн уу, ${user?.firstName || "Хэрэглэгч"}`,
+            logIn: "Нэвтрэх",
+            signUp: "Бүртгүүлэх",
+            adminDashboard: "Админ самбар",
+            myBookings: "Миний захиалгууд",
+            logOut: "Гарах",
+            suggestions: "Санал болгох илэрц",
+            noSuggestions: "Тохирох караоке олдсонгүй",
+            showAllResults: `"${searchQuery.trim()}" бүх илэрцийг харах`,
+          }
+        : {
+            searchPlaceholder: "Search karaokes...",
+            searchAriaLabel: "Open search",
+            mapAriaLabel: "Open map page",
+            account: "Account",
+            greeting: `Hi, ${user?.firstName || "User"}`,
+            logIn: "Log in",
+            signUp: "Sign up",
+            adminDashboard: "Admin dashboard",
+            myBookings: "My bookings",
+            logOut: "Log out",
+            suggestions: "Suggestions",
+            noSuggestions: "No matching karaoke found",
+            showAllResults: `Show all results for "${searchQuery.trim()}"`,
+          },
+    [language, searchQuery, user?.firstName]
+  )
+
+  const trimmedSearchQuery = searchQuery.trim()
+
+  const suggestions = useMemo(() => {
+    if (!trimmedSearchQuery) return []
+
+    return searchListings
+      .map((listing) => ({
+        listing,
+        score: getSuggestionScore(listing, trimmedSearchQuery),
+      }))
+      .filter((entry) => Number.isFinite(entry.score))
+      .sort((left, right) => {
+        if (left.score !== right.score) {
+          return left.score - right.score
+        }
+
+        return left.listing.name.localeCompare(right.listing.name)
+      })
+      .slice(0, 5)
+      .map((entry) => entry.listing)
+  }, [searchListings, trimmedSearchQuery])
 
   const metadata = useMemo(() => {
     return (user?.publicMetadata as PublicMetadata | undefined) ?? {}
   }, [user])
 
   useEffect(() => {
+    const fetchSearchListings = async () => {
+      try {
+        const response = await fetch(`${apiRootUrl}/karaoke`, {
+          cache: "no-store",
+        })
+
+        if (!response.ok) {
+          return
+        }
+
+        const data = (await response.json()) as {
+          karaokes?: SearchListing[]
+        }
+
+        setSearchListings(Array.isArray(data.karaokes) ? data.karaokes : [])
+      } catch {
+        setSearchListings([])
+      }
+    }
+
+    void fetchSearchListings()
+  }, [])
+
+  useEffect(() => {
     const syncProfile = async () => {
-      if (!isLoaded) return
+      if (!isAuthLoaded || !getToken) return
 
       if (!isSignedIn) {
         setProfileMetadata(null)
+        setIsProfileResolved(true)
         return
       }
 
@@ -88,6 +211,7 @@ export default function Navbar() {
 
         if (!token) {
           setProfileMetadata(null)
+          setIsProfileResolved(true)
           return
         }
 
@@ -103,11 +227,14 @@ export default function Navbar() {
         })
       } catch {
         setProfileMetadata(null)
+      } finally {
+        setIsProfileResolved(true)
       }
     }
 
+    setIsProfileResolved(false)
     void syncProfile()
-  }, [getToken, isLoaded, isSignedIn, user?.id])
+  }, [getToken, isAuthLoaded, isSignedIn, user?.id])
 
   const effectiveMetadata = profileMetadata ?? metadata
 
@@ -119,7 +246,7 @@ export default function Navbar() {
     effectiveMetadata.role === "admin" ||
     effectiveMetadata.role === "karaoke_owner" ||
     isApprovedOwner
-  const isRegularUser = isSignedIn && !isAdmin
+  const isRegularUser = isSignedIn && isProfileResolved && !isAdmin
 
   useEffect(() => {
     hasHydrated.current = true
@@ -139,14 +266,35 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!hasHydrated.current) return
-    localStorage.setItem("language", language)
-  }, [language])
+    setSearchQuery(searchParams.get("q") ?? "")
+  }, [searchParams])
 
   const handleSearch = () => {
-    const trimmed = searchQuery.trim()
-    if (!trimmed) return
-    router.push(`/search?q=${encodeURIComponent(trimmed)}`)
+    const trimmed = trimmedSearchQuery
+    const nextSearchParams = new URLSearchParams(searchParams.toString())
+
+    if (trimmed) {
+      nextSearchParams.set("q", trimmed)
+    } else {
+      nextSearchParams.delete("q")
+    }
+
+    const nextQuery = nextSearchParams.toString()
+    const nextUrl = nextQuery ? `/?${nextQuery}` : "/"
+
+    if (pathname === "/") {
+      router.push(nextUrl)
+    } else {
+      router.push(nextUrl)
+    }
+
+    setSearchOpen(false)
+  }
+
+  const handleSuggestionSelect = (listing: SearchListing) => {
+    setSearchOpen(false)
     setSearchQuery("")
+    router.push(`/book/${listing._id}`)
   }
 
   return (
@@ -171,10 +319,10 @@ export default function Navbar() {
         </motion.div>
 
         <div className="flex items-center gap-2">
-          <DropdownMenu>
+          <DropdownMenu open={searchOpen} onOpenChange={setSearchOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="glass" size="icon" className="rounded-xl" type="button">
-                <Search className="h-5 w-5 text-foreground" />
+                <Search className="h-5 w-5 text-foreground" aria-label={copy.searchAriaLabel} />
               </Button>
             </DropdownMenuTrigger>
 
@@ -183,8 +331,10 @@ export default function Navbar() {
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search karaokes..."
+                  placeholder={copy.searchPlaceholder}
                   className="rounded-lg"
+                  autoFocus
+                  onFocus={() => setSearchOpen(true)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleSearch()
@@ -201,6 +351,49 @@ export default function Navbar() {
                   <Search className="h-4 w-4" />
                 </Button>
               </div>
+
+              {trimmedSearchQuery ? (
+                <div className="mt-3 space-y-2">
+                  <p className="px-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    {copy.suggestions}
+                  </p>
+
+                  {suggestions.length > 0 ? (
+                    <div className="space-y-1">
+                      {suggestions.map((listing) => (
+                        <button
+                          key={listing._id}
+                          type="button"
+                          onClick={() => handleSuggestionSelect(listing)}
+                          className="flex w-full items-start justify-between rounded-xl border border-transparent bg-background/70 px-3 py-2 text-left transition hover:border-primary/30 hover:bg-accent"
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{listing.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {[listing.address, listing.city].filter(Boolean).join(", ")}
+                            </p>
+                          </div>
+                          <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-border bg-background/70 px-3 py-3 text-sm text-muted-foreground">
+                      {copy.noSuggestions}
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full justify-start rounded-xl px-3"
+                    onClick={handleSearch}
+                  >
+                    <Search className="h-4 w-4" />
+                    {copy.showAllResults}
+                  </Button>
+                </div>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -208,14 +401,14 @@ export default function Navbar() {
             variant="glass"
             className="rounded-xl px-3"
             type="button"
-            onClick={() => setLanguage((prev) => (prev === "EN" ? "MN" : "EN"))}
+            onClick={toggleLanguage}
           >
             <Languages className="mr-2 h-4 w-4 text-foreground" />
             <span className="text-sm font-medium text-foreground">{language}</span>
           </Button>
 
           <Button asChild variant="glass" size="icon" className="rounded-xl">
-            <Link href="/map" aria-label="Open map page">
+            <Link href="/map" aria-label={copy.mapAriaLabel}>
               <MapPin className="h-5 w-5 text-foreground" />
             </Link>
           </Button>
@@ -229,7 +422,7 @@ export default function Navbar() {
 
             <DropdownMenuContent align="end" className="w-60 rounded-xl">
               <DropdownMenuLabel>
-                {isSignedIn ? `Hi, ${user?.firstName || "User"}` : "Account"}
+                {isSignedIn ? copy.greeting : copy.account}
               </DropdownMenuLabel>
 
               <DropdownMenuSeparator />
@@ -239,14 +432,14 @@ export default function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href="/sign-in" className="flex items-center gap-2">
                       <LogIn className="h-4 w-4" />
-                      Log in
+                      {copy.logIn}
                     </Link>
                   </DropdownMenuItem>
 
                   <DropdownMenuItem asChild>
                     <Link href="/sign-up" className="flex items-center gap-2">
                       <UserPlus className="h-4 w-4" />
-                      Sign up
+                      {copy.signUp}
                     </Link>
                   </DropdownMenuItem>
                 </>
@@ -255,7 +448,7 @@ export default function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href="/admin/dashboard" className="flex items-center gap-2">
                       <LayoutDashboard className="h-4 w-4" />
-                      Admin dashboard
+                      {copy.adminDashboard}
                     </Link>
                   </DropdownMenuItem>
 
@@ -264,7 +457,7 @@ export default function Navbar() {
                   <SignOutButton redirectUrl="/">
                     <DropdownMenuItem className="cursor-pointer">
                       <LogOut className="h-4 w-4" />
-                      Log out
+                      {copy.logOut}
                     </DropdownMenuItem>
                   </SignOutButton>
                 </>
@@ -273,7 +466,7 @@ export default function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href="/my-bookings" className="flex items-center gap-2">
                       <BookOpen className="h-4 w-4" />
-                      My bookings
+                      {copy.myBookings}
                     </Link>
                   </DropdownMenuItem>
 
@@ -282,7 +475,7 @@ export default function Navbar() {
                   <SignOutButton redirectUrl="/">
                     <DropdownMenuItem className="cursor-pointer">
                       <LogOut className="h-4 w-4" />
-                      Log out
+                      {copy.logOut}
                     </DropdownMenuItem>
                   </SignOutButton>
                 </>
@@ -317,4 +510,38 @@ export default function Navbar() {
       </div>
     </motion.nav>
   )
+}
+
+function NavbarWithClerk() {
+  const { user, isSignedIn } = useUser()
+  const { getToken, isLoaded } = useAuth()
+
+  return (
+    <NavbarContent
+      getToken={getToken}
+      isAuthLoaded={Boolean(isLoaded)}
+      isSignedIn={Boolean(isSignedIn)}
+      user={user}
+    />
+  )
+}
+
+function NavbarWithoutClerk() {
+  return <NavbarContent isAuthLoaded={true} isSignedIn={false} user={null} />
+}
+
+export default function Navbar() {
+  return (
+    <Suspense fallback={<div className="fixed left-0 right-0 top-0 z-50 h-[88px]" />}>
+      <NavbarInner />
+    </Suspense>
+  )
+}
+
+function NavbarInner() {
+  if (!clerkEnabled) {
+    return <NavbarWithoutClerk />
+  }
+
+  return <NavbarWithClerk />
 }
