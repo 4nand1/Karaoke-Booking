@@ -1,6 +1,17 @@
 import type { RequestHandler } from "express"
 import { getAuth } from "@clerk/express"
 import { KaraokeModel } from "../../models/Karaoke"
+import { UserProfile } from "../../models/UserProfile"
+
+const normalizeRole = (value: unknown): "customer" | "karaoke_owner" => {
+  const role = String(value || "").trim().toLowerCase()
+
+  if (role === "admin" || role === "karaoke_owner") {
+    return "karaoke_owner"
+  }
+
+  return "customer"
+}
 
 export const createKaraoke: RequestHandler = async (req, res) => {
   try {
@@ -8,6 +19,15 @@ export const createKaraoke: RequestHandler = async (req, res) => {
 
     if (!isAuthenticated || !userId) {
       return res.status(401).json({ message: "Unauthorized" })
+    }
+
+    const profile = await UserProfile.findOne({ clerkUserId: userId }).lean()
+    const role = normalizeRole((profile as any)?.role)
+
+    if (role !== "karaoke_owner") {
+      return res.status(403).json({
+        message: "Access denied. Only admin accounts can register karaokes.",
+      })
     }
 
     const {
@@ -66,6 +86,15 @@ export const createKaraoke: RequestHandler = async (req, res) => {
       latitude: latitude ?? null,
       longitude: longitude ?? null,
     })
+
+    await UserProfile.findOneAndUpdate(
+      { clerkUserId: userId },
+      {
+        karaokeId: String((karaoke as any)._id),
+        role: "karaoke_owner",
+        ownerStatus: "approved",
+      }
+    )
 
     return res.status(201).json({ karaoke })
   } catch (error) {
