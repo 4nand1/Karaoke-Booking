@@ -37,7 +37,7 @@ if (!publishableKey) {
 
 app.use(
   cors({
-    origin: clientUrl,
+    origin: "*",
     credentials: true,
   }),
 );
