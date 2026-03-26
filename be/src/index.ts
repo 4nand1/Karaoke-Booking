@@ -8,9 +8,9 @@ import { RoomRouter } from "./routes/roomRoutes";
 import { MenuRouter } from "./routes/menuRouter";
 import { CategoryRouter } from "./routes/category.router";
 
-dotenv.config()
+dotenv.config();
 
-const app = express()
+const app = express();
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -32,8 +32,10 @@ app.use("/api/karaoke/:id/rooms", RoomRouter);
 app.use("/api/karaoke/:id/menu", MenuRouter);
 app.use("/api/categories", CategoryRouter);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 9000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+export default app;
