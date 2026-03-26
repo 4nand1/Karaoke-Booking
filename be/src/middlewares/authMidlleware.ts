@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express"
 import { getAuth } from "@clerk/express"
 import { UserProfile } from "../models/UserProfile"
+import { resolveOwnerKaraokes } from "../services/ownerReconciliation"
 
 const normalizeRole = (value: unknown): "customer" | "karaoke_owner" => {
   const role = String(value || "").trim().toLowerCase()
@@ -30,8 +31,17 @@ export const requireKaraokeAdmin: RequestHandler = async (req, res, next) => {
       return res.status(401).json({ message: "Unauthorized" })
     }
 
-    const profile = await UserProfile.findOne({ clerkUserId: userId }).lean()
-    const role = normalizeRole((profile as any)?.role)
+    let profile = await UserProfile.findOne({ clerkUserId: userId }).lean()
+    let role = normalizeRole((profile as any)?.role)
+
+    if (role !== "karaoke_owner") {
+      const { karaokes } = await resolveOwnerKaraokes(userId)
+
+      if (karaokes.length) {
+        profile = await UserProfile.findOne({ clerkUserId: userId }).lean()
+        role = normalizeRole((profile as any)?.role)
+      }
+    }
 
     if (role !== "karaoke_owner") {
       return res.status(403).json({

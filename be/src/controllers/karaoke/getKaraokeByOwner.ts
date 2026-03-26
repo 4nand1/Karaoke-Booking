@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express"
 import { getAuth } from "@clerk/express"
 import { KaraokeModel } from "../../models/Karaoke"
+import { resolveOwnerKaraokes } from "../../services/ownerReconciliation"
 
 export const getKaraokeByOwner: RequestHandler = async (req, res) => {
   try {
@@ -15,9 +16,11 @@ export const getKaraokeByOwner: RequestHandler = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" })
     }
 
-    const karaokes = await KaraokeModel.find({ ownerClerkUserId }).sort({
-      createdAt: -1,
-    })
+    const karaokes = userId
+      ? (await resolveOwnerKaraokes(userId)).karaokes
+      : await KaraokeModel.find({ ownerClerkUserId }).sort({
+          createdAt: -1,
+        })
 
     if (!karaokes.length) {
       return res.status(404).json({ message: "Karaoke not found" })

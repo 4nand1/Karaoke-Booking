@@ -2,6 +2,7 @@ import { Router } from "express"
 import { clerkClient, getAuth } from "@clerk/express"
 import { UserProfile } from "../models/UserProfile"
 import { KaraokeModel } from "../models/Karaoke"
+import { resolveOwnerKaraokes } from "../services/ownerReconciliation"
 
 const router = Router()
 
@@ -58,9 +59,7 @@ const loadCurrentUserState = async (userId: string) => {
     })
   }
 
-  const karaokes = await KaraokeModel.find({ ownerClerkUserId: userId }).sort({
-    createdAt: -1,
-  })
+  const { karaokes } = await resolveOwnerKaraokes(userId)
   const karaoke = karaokes[0] ?? null
 
   const rawRole = String((profile as any).role)
