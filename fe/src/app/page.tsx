@@ -350,7 +350,20 @@ const IndexContent = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <HeroCarousel />
+      <HeroCarousel
+        recommended={[
+          ...mappedKaraokes.filter((k) => k.rating !== null).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)),
+          ...mappedKaraokes.filter((k) => k.rating === null),
+        ].slice(0, 5).map((k) => ({
+          id: k.id,
+          image: k.image,
+          name: k.name,
+          location: k.location,
+          rating: k.rating,
+          price: k.price,
+          hours: k.hours,
+        }))}
+      />
       <MapPreview />
 
       <section className="container mx-auto px-6 py-16">
