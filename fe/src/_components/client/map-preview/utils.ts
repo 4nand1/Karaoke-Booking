@@ -125,6 +125,30 @@ export function getBookingStatus(
   };
 }
 
+export function isFreeNow(karaoke: Karaoke, orders: Order[]): boolean {
+  const isOpenNow = getIsOpenNow(karaoke.openingTime, karaoke.closingTime);
+  if (!isOpenNow) return false;
+
+  const today = getTodayDateString();
+  const currentSlot = getCurrentSlot();
+
+  const bookedRooms = new Set(
+    orders
+      .filter(
+        (order) =>
+          String(order.karaokeId) === karaoke._id &&
+          order.bookingDate === today &&
+          order.status !== "cancelled" &&
+          Array.isArray(order.bookingSlots) &&
+          order.bookingSlots.includes(currentSlot)
+      )
+      .map((order) => order.roomId)
+      .filter(Boolean)
+  ).size;
+
+  return bookedRooms === 0;
+}
+
 export function getNearbyKaraokes(
   karaokes: Karaoke[],
   userLocation: UserLocation | null
