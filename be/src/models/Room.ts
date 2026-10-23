@@ -1,23 +1,21 @@
+import { Schema } from "mongoose"
 
-import { Schema, model } from "mongoose";
-
-
-export const roomSchema = new Schema({
-  name: { type: String, required: true },
-  type: { type: String, enum: ["VIP", "Medium", "Small"], required: true },
-  price: { type: Number, required: true },
-  capacity: { type: Number, required: true },
-  image: { type: String, required: true },
-  isAvailable: { type: Boolean, default: true },
-});
+export const ROOM_TYPES = ["VIP", "Medium", "Small"] as const
 
 export interface IRoom {
   name: string
-  type: "VIP" | "Medium" | "Small"
+  type: (typeof ROOM_TYPES)[number]
   price: number
   capacity: number
   image: string
   isAvailable: boolean
 }
 
-export const RoomModel = model("Room", roomSchema);
+export const roomSchema = new Schema<IRoom>({
+  name: { type: String, required: true },
+  type: { type: String, enum: ROOM_TYPES, required: true },
+  price: { type: Number, required: true, min: 0 },
+  capacity: { type: Number, required: true, min: 1 },
+  image: { type: String, required: true },
+  isAvailable: { type: Boolean, default: true },
+})

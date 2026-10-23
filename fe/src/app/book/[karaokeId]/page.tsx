@@ -143,7 +143,7 @@ export default function BookingPage() {
       }
 
       try {
-        const response = await fetch(`${apiRootUrl}/karaoke/${karaokeId}`, { cache: "no-store" });
+        const response = await fetch(`${apiRootUrl}/api/karaoke/${karaokeId}`, { cache: "no-store" });
         if (!response.ok) throw new Error("Failed to fetch karaoke");
         const data = (await response.json()) as { karaoke?: Karaoke };
         const karaokeData = data.karaoke ?? null;

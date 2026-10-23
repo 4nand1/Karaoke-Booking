@@ -175,7 +175,7 @@ function NavbarContent({
   useEffect(() => {
     const fetchSearchListings = async () => {
       try {
-        const response = await fetch(`${apiRootUrl}/karaoke`, {
+        const response = await fetch(`${apiRootUrl}/api/karaoke`, {
           cache: "no-store",
         })
 

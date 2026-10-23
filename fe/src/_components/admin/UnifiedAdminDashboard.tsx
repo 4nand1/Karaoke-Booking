@@ -146,7 +146,7 @@ export function UnifiedAdminDashboard({
         throw new Error("Your session expired. Please sign in again.")
       }
 
-      const res = await fetch(`${apiRootUrl}/karaoke/mine`, {
+      const res = await fetch(`${apiRootUrl}/api/karaoke/mine`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -190,7 +190,7 @@ export function UnifiedAdminDashboard({
   }
 
   const refreshBookings = useCallback(async () => {
-    if (!selectedKaraoke?.ownerClerkUserId) {
+    if (!selectedKaraoke?._id) {
       setBookings([])
       setBookingError("")
       return
@@ -200,9 +200,11 @@ export function UnifiedAdminDashboard({
     setBookingError("")
 
     try {
+      const token = await getToken()
       const res = await fetch(
-        `${apiRootUrl}/api/booking/owner/${selectedKaraoke.ownerClerkUserId}`,
+        `${apiRootUrl}/api/orders?karaokeId=${selectedKaraoke._id}`,
         {
+          headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         }
       )
@@ -213,7 +215,7 @@ export function UnifiedAdminDashboard({
         throw new Error(data.message || "Failed to load bookings.")
       }
 
-      setBookings(Array.isArray(data.data) ? (data.data as Booking[]) : [])
+      setBookings(Array.isArray(data) ? (data as Booking[]) : [])
     } catch (error) {
       setBookingError(
         error instanceof Error ? error.message : "Failed to load booking data."
@@ -221,19 +223,19 @@ export function UnifiedAdminDashboard({
     } finally {
       setIsBookingsLoading(false)
     }
-  }, [selectedKaraoke?.ownerClerkUserId])
+  }, [selectedKaraoke?._id, getToken])
 
   useEffect(() => {
     void refreshBookings()
 
-    if (!selectedKaraoke?.ownerClerkUserId) return
+    if (!selectedKaraoke?._id) return
 
     const intervalId = window.setInterval(() => {
       void refreshBookings()
     }, 30000)
 
     return () => window.clearInterval(intervalId)
-  }, [refreshBookings, selectedKaraoke?.ownerClerkUserId, selectedKaraoke?._id])
+  }, [refreshBookings, selectedKaraoke?._id])
 
   function handleRegistered(karaoke: RegisteredKaraoke) {
     setKaraokes((prev) => [karaoke, ...prev.filter((item) => item._id !== karaoke._id)])

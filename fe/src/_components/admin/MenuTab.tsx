@@ -85,7 +85,7 @@ export function MenuTab({
     setLoading(true)
     try {
       const token = await getToken()
-      const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/menu`, {
+      const res = await fetch(`${apiRootUrl}/api/karaoke/${karaoke._id}/menu`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -135,7 +135,7 @@ export function MenuTab({
     try {
       const token = await getToken()
       const res = await fetch(
-        `${apiRootUrl}/karaoke/${karaoke._id}/menu/${editing}`,
+        `${apiRootUrl}/api/karaoke/${karaoke._id}/menu/${editing}`,
         {
           method: "PUT",
           headers: {
@@ -171,7 +171,7 @@ export function MenuTab({
 
     try {
       const token = await getToken()
-      const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/menu/${itemId}`, {
+      const res = await fetch(`${apiRootUrl}/api/karaoke/${karaoke._id}/menu/${itemId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       })

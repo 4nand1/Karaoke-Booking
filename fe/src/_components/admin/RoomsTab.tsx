@@ -91,7 +91,7 @@ export function RoomsTab({
     setLoading(true)
     try {
       const token = await getToken()
-      const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/rooms`, {
+      const res = await fetch(`${apiRootUrl}/api/karaoke/${karaoke._id}/rooms`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -131,7 +131,7 @@ export function RoomsTab({
     try {
       const token = await getToken()
       const res = await fetch(
-        `${apiRootUrl}/karaoke/${karaoke._id}/rooms/${editing}`,
+        `${apiRootUrl}/api/karaoke/${karaoke._id}/rooms/${editing}`,
         {
           method: "PUT",
           headers: {
@@ -165,7 +165,7 @@ export function RoomsTab({
 
     try {
       const token = await getToken()
-      const res = await fetch(`${apiRootUrl}/karaoke/${karaoke._id}/rooms/${roomId}`, {
+      const res = await fetch(`${apiRootUrl}/api/karaoke/${karaoke._id}/rooms/${roomId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       })

@@ -1,4 +1,4 @@
-import { Schema, model, models } from "mongoose"
+import { Schema, model, models, type Model } from "mongoose"
 
 export type UserRole = "customer" | "karaoke_owner"
 export type OwnerStatus = "pending" | "approved" | null
@@ -35,4 +35,4 @@ const userProfileSchema = new Schema<IUserProfile>(
 )
 
 export const UserProfile =
-  models.UserProfile || model<IUserProfile>("UserProfile", userProfileSchema)
+  (models.UserProfile as Model<IUserProfile>) || model<IUserProfile>("UserProfile", userProfileSchema)

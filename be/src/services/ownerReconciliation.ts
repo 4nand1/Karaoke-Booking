@@ -1,5 +1,4 @@
 import { clerkClient } from "@clerk/express"
-import Booking from "../models/Booking"
 import { KaraokeModel } from "../models/Karaoke"
 import { UserProfile } from "../models/UserProfile"
 
@@ -60,11 +59,6 @@ export async function resolveOwnerKaraokes(userId: string) {
         email: primaryEmail,
       },
     }
-  )
-
-  await Booking.updateMany(
-    { karaokeId: { $in: karaokeIds.map((id) => String(id)) } },
-    { $set: { ownerClerkUserId: userId } }
   )
 
   const currentProfile = await UserProfile.findOne({ clerkUserId: userId })

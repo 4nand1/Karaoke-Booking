@@ -217,7 +217,7 @@ const IndexContent = () => {
         setError("")
 
         const [karaokeResponse, reviewResponse] = await Promise.all([
-          fetch(`${apiRootUrl}/karaoke`, {
+          fetch(`${apiRootUrl}/api/karaoke`, {
             cache: "no-store",
           }),
           fetch(`${apiRootUrl}/api/reviews`, {

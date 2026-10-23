@@ -335,7 +335,7 @@ export default function KaraokeRegisterForm({
           }
 
       const endpoint = currentKaraoke?._id
-        ? `${apiBaseUrl.replace(/\/api$/, "")}/karaoke/${currentKaraoke._id}`
+        ? `${apiBaseUrl}/karaoke/${currentKaraoke._id}`
         : `${apiBaseUrl}/onboarding/karaoke`
 
       const res = await fetch(endpoint, {

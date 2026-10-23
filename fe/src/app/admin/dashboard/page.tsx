@@ -78,7 +78,7 @@ async function getAdminData() {
 
   const profileData = (await profileRes.json()) as AdminProfileResponse
 
-  const karaokeRes = await fetch(`${apiRootUrl}/karaoke/mine`, {
+  const karaokeRes = await fetch(`${apiRootUrl}/api/karaoke/mine`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,

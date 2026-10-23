@@ -48,8 +48,8 @@ export default function MapPreview() {
     const fetchMapData = async () => {
       try {
         const [karaokeRes, orderRes] = await Promise.all([
-          fetch(`${apiRootUrl}/karaoke`),
-          fetch(`${apiBaseUrl}/orders`),
+          fetch(`${apiRootUrl}/api/karaoke`),
+          fetch(`${apiBaseUrl}/orders/availability`),
         ]);
 
         if (!karaokeRes.ok) {
