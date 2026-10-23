@@ -5,6 +5,7 @@ import { useUser } from "@clerk/nextjs"
 import { toast } from "sonner"
 import { ChevronLeft, ChevronRight, LocateFixed } from "lucide-react"
 
+import LocationPicker from "./LocationPickerClient"
 import { ImageUploadField } from "@/components/ui/image-upload-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -205,11 +206,19 @@ export default function KaraokeRegisterForm({ currentKaraoke = null, onRegistere
             {field("latitude", t("Latitude", "Өргөрөг"), { inputMode: "decimal" })}
             {field("longitude", t("Longitude", "Уртраг"), { inputMode: "decimal" })}
           </div>
+          <LocationPicker
+            latitude={form.latitude === "" || Number.isNaN(Number(form.latitude)) ? null : Number(form.latitude)}
+            longitude={form.longitude === "" || Number.isNaN(Number(form.longitude)) ? null : Number(form.longitude)}
+            onPick={(lat, lng) => {
+              set("latitude", lat.toFixed(6))
+              set("longitude", lng.toFixed(6))
+            }}
+          />
           <div className="flex flex-wrap items-center gap-3">
             <Button type="button" variant="outline" size="sm" onClick={useMyLocation}>
               <LocateFixed /> {t("Use my current location", "Одоогийн байршлаа ашиглах")}
             </Button>
-            <p className="text-xs text-muted-foreground">{t("Needed to appear on the map", "Газрын зураг дээр харагдахад шаардлагатай")}</p>
+            <p className="text-xs text-muted-foreground">{t("Click the map to place your venue. Needed to appear on the map.", "Газрын зураг дээр дарж байршлаа тэмдэглэнэ үү. Газрын зураг дээр харагдахад шаардлагатай.")}</p>
           </div>
         </div>
       ),
