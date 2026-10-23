@@ -43,9 +43,3 @@ export type Order = {
   bookingSlots?: string[];
   status?: "pending" | "confirmed" | "cancelled";
 };
-
-export type BookingStatusView = {
-  label: string;
-  detail: string;
-  className: string;
-};

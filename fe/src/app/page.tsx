@@ -1,446 +1,233 @@
 "use client"
 
+import Link from "next/link"
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { MapPin, SearchX, WifiOff, X } from "lucide-react"
 import Navbar from "@/_components/client/navbar"
-import HeroCarousel from "@/_components/client/HeroCarousel"
-import FilterBar, { type FilterValues } from "@/_components/client/FilterBar"
+import Hero from "@/_components/client/Hero"
+import FilterBar, { defaultFilters, type FilterValues } from "@/_components/client/FilterBar"
 import KaraokeCard from "@/_components/client/KaraokeCard"
-import MapPreview from "@/_components/client/MapPreviewClient"
-import ReviewForm from "@/_components/client/ReviewForm"
 import Footer from "@/_components/client/Footer"
-import { motion } from "framer-motion"
-import { Suspense, useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "next/navigation"
-import { apiRootUrl } from "@/lib/api-url"
+import { Button } from "@/components/ui/button"
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
+import { apiBaseUrl } from "@/lib/api-url"
 import { useLanguage } from "@/lib/language"
 import { formatDisplayLocation } from "@/lib/location"
-import SiteReviews from "@/_components/client/SiteReviews"
+import { isOpenAt, lowestPrice } from "@/lib/venue"
+
+type Room = { _id: string; name: string; type: string; price: number; capacity: number; image: string }
 
 type KaraokeListing = {
   _id: string
   name: string
   address: string
   city: string
-  description: string
-  openingHours?: string
   openingTime?: string
   closingTime?: string
-  roomTypes?: string[]
   pricePerHour?: number | null
-  capacity?: number | null
-  amenities?: string[]
   images?: string[]
   image?: string | null
-  approvalStatus: "pending" | "approved" | "rejected" | "draft"
   rating?: number | null
-  rooms?: Array<{
-    _id: string
-    name: string
-    type: string
-    price: number
-    capacity: number
-    image: string
-  }>
+  rooms?: Room[]
 }
 
-type KaraokeCardViewModel = {
-  id: string
-  image: string
-  name: string
-  location: string
-  rating: number | null
-  price: string
-  startingPrice: number | null
-  hours: string
-  roomSizes: Array<"small" | "large" | "vip">
-  isOpenNow: boolean
-  rooms: Array<{
-    _id: string
-    name: string
-    type: string
-    price: number
-    capacity: number
-    image: string
-  }>
-}
-
-type ReviewRecord = {
-  karaokeId?: string
-  rating?: number
-}
+type ReviewRecord = { karaokeId?: string; rating?: number }
 
 const FALLBACK_IMAGE = "/karaoke-card-1.jpg"
 
-function toMinutes(value?: string) {
-  if (!value || !value.includes(":")) return null
-  const [hours, minutes] = value.split(":").map(Number)
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null
-  return hours * 60 + minutes
+const PRICE_RANGES: Record<Exclude<FilterValues["price"], "all">, (p: number) => boolean> = {
+  lt50: (p) => p < 50000,
+  "50to80": (p) => p >= 50000 && p <= 80000,
+  gt80: (p) => p > 80000,
 }
 
-function getIsOpenNow(openingTime?: string, closingTime?: string) {
-  const open = toMinutes(openingTime)
-  const close = toMinutes(closingTime)
-
-  if (open === null || close === null) return false
-
-  const now = new Date()
-  const currentMinutes = now.getHours() * 60 + now.getMinutes()
-
-  if (open <= close) {
-    return currentMinutes >= open && currentMinutes <= close
-  }
-
-  return currentMinutes >= open || currentMinutes <= close
-}
-
-function getRoomSizes(
-  karaoke: Pick<KaraokeListing, "roomTypes" | "rooms" | "capacity">
-): Array<"small" | "large" | "vip"> {
-  const sizes = new Set<"small" | "large" | "vip">()
-
-  const addFromText = (value?: string | null, capacity?: number | null) => {
-    const normalized = value?.trim().toLowerCase() ?? ""
-
-    if (normalized.includes("vip")) {
-      sizes.add("vip")
-      return
-    }
-
-    if (normalized.includes("large")) {
-      sizes.add("large")
-      return
-    }
-
-    if (normalized.includes("small")) {
-      sizes.add("small")
-      return
-    }
-
-    if (normalized.includes("medium")) {
-      sizes.add((capacity ?? karaoke.capacity ?? 0) >= 8 ? "large" : "small")
-      return
-    }
-
-    if (typeof capacity === "number") {
-      sizes.add(capacity >= 8 ? "large" : "small")
-    }
-  }
-
-  karaoke.roomTypes?.forEach((roomType) => addFromText(roomType, karaoke.capacity))
-  karaoke.rooms?.forEach((room) => addFromText(room.type, room.capacity))
-
-  if (sizes.size === 0 && typeof karaoke.capacity === "number") {
-    sizes.add(karaoke.capacity >= 8 ? "large" : "small")
-  }
-
-  return Array.from(sizes)
-}
-
-function mapKaraokeToCard(karaoke: KaraokeListing): KaraokeCardViewModel {
-  const lowestRoomPrice =
-    karaoke.rooms && karaoke.rooms.length > 0
-      ? Math.min(...karaoke.rooms.map((room) => room.price))
-      : null
-
-  return {
-    id: karaoke._id,
-    image: karaoke.image || karaoke.images?.[0] || FALLBACK_IMAGE,
-    name: karaoke.name,
-    location: formatDisplayLocation(karaoke.address, karaoke.city),
-    rating: karaoke.rating ?? null,
-    price:
-      typeof karaoke.pricePerHour === "number"
-        ? `$${karaoke.pricePerHour}/hr`
-        : typeof lowestRoomPrice === "number" && Number.isFinite(lowestRoomPrice)
-          ? `₮${lowestRoomPrice.toLocaleString()}/hr`
-        : "Contact for price",
-    startingPrice:
-      typeof karaoke.pricePerHour === "number"
-        ? karaoke.pricePerHour
-        : typeof lowestRoomPrice === "number" && Number.isFinite(lowestRoomPrice)
-          ? lowestRoomPrice
-          : null,
-    hours:
-      karaoke.openingHours ||
-      [karaoke.openingTime, karaoke.closingTime].filter(Boolean).join(" - ") ||
-      "Hours not available",
-    roomSizes: getRoomSizes(karaoke),
-    isOpenNow: getIsOpenNow(karaoke.openingTime, karaoke.closingTime),
-    rooms: karaoke.rooms ?? [],
-  }
-}
-
-const IndexContent = () => {
-  const searchParams = useSearchParams()
-  const { language } = useLanguage()
-  const [filters, setFilters] = useState<FilterValues>({
-    minPrice: "",
-    maxPrice: "",
-    minRating: 0,
-    openNow: false,
-    roomSize: "all",
-  })
+function IndexContent() {
+  const router = useRouter()
+  const { t } = useLanguage()
+  const searchQuery = (useSearchParams().get("q") ?? "").trim()
+  const [filters, setFilters] = useState<FilterValues>(defaultFilters)
   const [karaokes, setKaraokes] = useState<KaraokeListing[]>([])
   const [reviews, setReviews] = useState<ReviewRecord[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const searchQuery = searchParams.get("q")?.trim().toLowerCase() ?? ""
+  const [error, setError] = useState(false)
 
-  const copy = useMemo(
-    () =>
-      language === "MN"
-        ? {
-            sectionTitlePrefix: "Онцлох Караоке",
-            sectionTitleAccent: "Газрууд",
-            sectionDescription: "Платформ дээр баталгаажсан, жинхэнэ эзэмшигчдийн listing-үүд",
-            loading: "Караоке жагсаалтыг ачаалж байна...",
-            loadError: "Караоке жагсаалт ачаалж чадсангүй",
-            noResults: "Илэрц олдсонгүй.",
-            searchResults: `"${searchParams.get("q")}" хайлтын илэрц`,
-          }
-        : {
-            sectionTitlePrefix: "Popular Karaoke",
-            sectionTitleAccent: "Spots",
-            sectionDescription: "Approved karaoke listings from real owners on the platform",
-            loading: "Loading karaoke listings...",
-            loadError: "Failed to load karaoke listings",
-            noResults: "No karaoke listings found.",
-            searchResults: `Search results for "${searchParams.get("q")}"`,
-          },
-    [language, searchParams]
-  )
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(false)
+    try {
+      const [karaokeRes, reviewRes] = await Promise.all([
+        fetch(`${apiBaseUrl}/karaoke`, { cache: "no-store" }),
+        fetch(`${apiBaseUrl}/reviews`, { cache: "no-store" }),
+      ])
+      if (!karaokeRes.ok) throw new Error(String(karaokeRes.status))
+      setKaraokes(((await karaokeRes.json()) as { karaokes?: KaraokeListing[] }).karaokes ?? [])
+      setReviews(reviewRes.ok ? (((await reviewRes.json()) as { data?: ReviewRecord[] }).data ?? []) : [])
+    } catch {
+      setError(true)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const fetchKaraokes = async () => {
-      try {
-        setLoading(true)
-        setError("")
+     
+    void load()
+  }, [load])
 
-        const [karaokeResponse, reviewResponse] = await Promise.all([
-          fetch(`${apiRootUrl}/api/karaoke`, {
-            cache: "no-store",
-          }),
-          fetch(`${apiRootUrl}/api/reviews`, {
-            cache: "no-store",
-          }),
-        ])
-
-        if (!karaokeResponse.ok) {
-          throw new Error(`Failed to load karaokes: ${karaokeResponse.status}`)
-        }
-
-        const karaokeData = (await karaokeResponse.json()) as {
-          karaokes?: KaraokeListing[]
-        }
-        setKaraokes(Array.isArray(karaokeData.karaokes) ? karaokeData.karaokes : [])
-
-        if (reviewResponse.ok) {
-          const reviewData = (await reviewResponse.json()) as {
-            data?: ReviewRecord[]
-          }
-          setReviews(Array.isArray(reviewData.data) ? reviewData.data : [])
-        } else {
-          setReviews([])
-        }
-      } catch (err) {
-        console.error("Failed to fetch karaokes:", err)
-        setError(copy.loadError)
-      } finally {
-        setLoading(false)
-      }
+  const venues = useMemo(() => {
+    const totals = new Map<string, { sum: number; count: number }>()
+    for (const review of reviews) {
+      if (typeof review.karaokeId !== "string" || !(Number(review.rating) >= 1 && Number(review.rating) <= 5)) continue
+      const entry = totals.get(review.karaokeId) ?? { sum: 0, count: 0 }
+      entry.sum += Number(review.rating)
+      entry.count += 1
+      totals.set(review.karaokeId, entry)
     }
 
-    fetchKaraokes()
-  }, [copy.loadError])
-
-  const ratingByKaraokeId = useMemo(() => {
-    const totals = new Map<string, { sum: number; count: number }>()
-
-    reviews.forEach((review) => {
-      if (
-        typeof review.karaokeId !== "string" ||
-        typeof review.rating !== "number" ||
-        review.rating < 1 ||
-        review.rating > 5
-      ) {
-        return
+    return karaokes.map((k) => {
+      const summary = totals.get(k._id)
+      const rooms = k.rooms ?? []
+      return {
+        id: k._id,
+        image: k.image || k.images?.[0] || FALLBACK_IMAGE,
+        name: k.name,
+        location: formatDisplayLocation(k.address, k.city),
+        rating: summary ? Number((summary.sum / summary.count).toFixed(1)) : (k.rating ?? null),
+        price: lowestPrice(rooms, k.pricePerHour),
+        openingTime: k.openingTime,
+        closingTime: k.closingTime,
+        isOpen: isOpenAt(k.openingTime, k.closingTime),
+        roomTypes: [...new Set(rooms.map((r) => r.type))],
+        searchText: [k.name, k.address, k.city, ...rooms.map((r) => r.name)].join(" ").toLowerCase(),
       }
-
-      const current = totals.get(review.karaokeId) ?? { sum: 0, count: 0 }
-      current.sum += review.rating
-      current.count += 1
-      totals.set(review.karaokeId, current)
     })
+  }, [karaokes, reviews])
 
-    return totals
-  }, [reviews])
-
-  const mappedKaraokes = useMemo(
-    () =>
-      karaokes.map((karaoke) => {
-        const reviewSummary = ratingByKaraokeId.get(karaoke._id)
-        const computedRating =
-          reviewSummary && reviewSummary.count > 0
-            ? Number((reviewSummary.sum / reviewSummary.count).toFixed(1))
-            : karaoke.rating ?? null
-
-        return mapKaraokeToCard({
-          ...karaoke,
-          rating: computedRating,
-        })
-      }),
-    [karaokes, ratingByKaraokeId]
-  )
-
-  const filteredSpots = useMemo(() => {
-    const minPrice = Number(filters.minPrice)
-    const maxPrice = Number(filters.maxPrice)
-    const hasMinPrice = filters.minPrice.trim() !== "" && !Number.isNaN(minPrice)
-    const hasMaxPrice = filters.maxPrice.trim() !== "" && !Number.isNaN(maxPrice)
-
-    const filtered = mappedKaraokes.filter((spot) => {
-      if (
-        filters.minRating > 0 &&
-        (spot.rating === null || spot.rating < filters.minRating)
-      ) {
-        return false
-      }
-
-      if (filters.openNow && !spot.isOpenNow) {
-        return false
-      }
-
-      if (
-        filters.roomSize !== "all" &&
-        !spot.roomSizes.includes(filters.roomSize)
-      ) {
-        return false
-      }
-
-      if (hasMinPrice && (spot.startingPrice === null || spot.startingPrice < minPrice)) {
-        return false
-      }
-
-      if (hasMaxPrice && (spot.startingPrice === null || spot.startingPrice > maxPrice)) {
-        return false
-      }
-
-      if (searchQuery) {
-        const searchableFields = [
-          spot.name,
-          spot.location,
-          spot.hours,
-          ...spot.roomSizes,
-          ...spot.rooms.map((room) => `${room.name} ${room.type}`),
-        ]
-          .join(" ")
-          .toLowerCase()
-
-        if (!searchableFields.includes(searchQuery)) {
-          return false
-        }
-      }
-
-      return true
+  const filtered = useMemo(() => {
+    const q = searchQuery.toLowerCase()
+    return venues.filter((v) => {
+      if (filters.openNow && !v.isOpen) return false
+      if (filters.roomType !== "all" && !v.roomTypes.includes(filters.roomType)) return false
+      if (filters.price !== "all" && (v.price === null || !PRICE_RANGES[filters.price](v.price))) return false
+      return !q || v.searchText.includes(q)
     })
-
-    return filtered
-  }, [filters, mappedKaraokes, searchQuery])
+  }, [venues, filters, searchQuery])
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
       <Navbar />
-      <HeroCarousel
-        recommended={[
-          ...mappedKaraokes.filter((k) => k.rating !== null).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)),
-          ...mappedKaraokes.filter((k) => k.rating === null),
-        ].slice(0, 5).map((k) => ({
-          id: k.id,
-          image: k.image,
-          name: k.name,
-          location: k.location,
-          rating: k.rating,
-          price: k.price,
-          hours: k.hours,
-        }))}
-      />
-      <MapPreview />
+      <main id="main">
+        <Hero total={venues.length} openNow={venues.filter((v) => v.isOpen).length} />
 
-      <section className="container mx-auto px-6 py-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <h2 className="font-display text-3xl font-bold text-foreground md:text-4xl">
-            {copy.sectionTitlePrefix} <span className="text-primary">{copy.sectionTitleAccent}</span>
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            {copy.sectionDescription}
-          </p>
-        </motion.div>
+        <section id="venues" className="wrap scroll-mt-20 py-10 md:py-16">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h2 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">
+                {t("Venues", "Караокенууд")}
+              </h2>
+              <p className="mt-1 text-sm tabular-nums text-muted-foreground">
+                {t(`${filtered.length} venues`, `${filtered.length} караоке`)}
+              </p>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/map">
+                <MapPin /> {t("Map view", "Газрын зураг")}
+              </Link>
+            </Button>
+          </div>
 
-        {searchQuery && (
-          <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-foreground">
-            {copy.searchResults}
-          </div>
-        )}
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              aria-label={t("Clear search", "Хайлт арилгах")}
+              className="mt-4 inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-sm hover:bg-muted"
+            >
+              “{searchQuery}” <X className="size-3.5" />
+            </button>
+          )}
 
-        <FilterBar onChange={setFilters} />
+          <FilterBar value={filters} onChange={setFilters} />
 
-        {loading ? (
-          <div className="mt-8 rounded-2xl border border-border bg-card p-6 text-muted-foreground">
-            {copy.loading}
+          <div className="mt-6">
+            {loading ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div key={i} className="overflow-hidden rounded-2xl border border-border bg-card">
+                    <Skeleton className="aspect-[4/3] rounded-none" />
+                    <div className="space-y-2 p-4">
+                      <Skeleton className="h-5 w-2/3" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-4 w-1/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : error ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon"><WifiOff /></EmptyMedia>
+                  <EmptyTitle>{t("Couldn't load venues", "Караокенуудыг ачаалж чадсангүй")}</EmptyTitle>
+                  <EmptyDescription>{t("Check your connection and try again.", "Интернэтээ шалгаад дахин оролдоно уу.")}</EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button onClick={() => void load()}>{t("Try again", "Дахин оролдох")}</Button>
+                </EmptyContent>
+              </Empty>
+            ) : filtered.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon"><SearchX /></EmptyMedia>
+                  <EmptyTitle>{t("No venues match", "Тохирох караоке олдсонгүй")}</EmptyTitle>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFilters(defaultFilters)
+                      if (searchQuery) router.push("/")
+                    }}
+                  >
+                    {t("Clear filters", "Шүүлтүүр арилгах")}
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map((v, i) => (
+                  <KaraokeCard key={v.id} {...v} index={i} />
+                ))}
+              </div>
+            )}
           </div>
-        ) : error ? (
-          <div className="mt-8 rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-red-400">
-            {error}
+        </section>
+
+        <section className="wrap pb-16">
+          <div className="rounded-2xl border border-border bg-card p-6 md:flex md:items-center md:justify-between md:gap-6">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {t("For owners", "Эзэмшигчдэд")}
+              </p>
+              <h3 className="mt-1 font-display text-xl font-semibold">
+                {t("Own a karaoke? List it free.", "Караоке эзэмшдэг үү? Үнэгүй бүртгүүлээрэй.")}
+              </h3>
+            </div>
+            <Button asChild className="mt-4 md:mt-0">
+              <Link href="/sign-up?role=admin">{t("List your venue", "Бүртгүүлэх")}</Link>
+            </Button>
           </div>
-        ) : filteredSpots.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-border bg-card p-6 text-muted-foreground">
-            {copy.noResults}
-          </div>
-        ) : (
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredSpots.map((spot, i) => (
-              <KaraokeCard
-                key={spot.id}
-                id={spot.id}
-                image={spot.image}
-                name={spot.name}
-                location={spot.location}
-                rating={spot.rating}
-                price={spot.price}
-                hours={spot.hours}
-                index={i}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-<SiteReviews/>
-    
+        </section>
+      </main>
       <Footer />
-    </div>
+    </>
   )
 }
 
-const IndexFallback = () => (
-  <div className="min-h-screen bg-background">
-    <Navbar />
-    <HeroCarousel />
-    <section className="container mx-auto px-6 py-16">
-      <div className="rounded-2xl border border-border bg-card p-6 text-muted-foreground">
-        Loading karaoke listings...
-      </div>
-    </section>
-    <Footer />
-  </div>
-)
-
 export default function Index() {
   return (
-    <Suspense fallback={<IndexFallback />}>
+    <Suspense>
       <IndexContent />
     </Suspense>
   )

@@ -1,32 +1,16 @@
-"use client"
-
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import type { Metadata } from "next"
 import Navbar from "@/_components/client/navbar"
 import MapPreview from "@/_components/client/MapPreviewClient"
 import Footer from "@/_components/client/Footer"
-import { Button } from "@/components/ui/button"
-import { useLanguage } from "@/lib/language"
-import MapClient from "./MapClient"
+
+export const metadata: Metadata = { title: "Map" }
 
 export default function MapPage() {
-  const { language } = useLanguage()
-
   return (
-    <div className="min-h-screen bg-background">
+    <>
       <Navbar />
-      <main className="pt-24">
-        <div className="container mx-auto px-4 pt-4">
-          <Button asChild variant="outline" className="rounded-xl">
-            <Link href="/">
-              <ArrowLeft className="h-4 w-4" />
-              {language === "MN" ? "Буцах" : "Back"}
-            </Link>
-          </Button>
-        </div>
-        <MapClient />
-      </main>
+      <MapPreview />
       <Footer />
-    </div>
+    </>
   )
 }

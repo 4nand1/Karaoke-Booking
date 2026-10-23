@@ -23,3 +23,13 @@ export default function MapAutoFit({ points, maxZoom = 15 }: Props) {
 
   return null;
 }
+
+export function MapFocus({ point }: { point: Point | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (point) map.flyTo(point, 15);
+  }, [map, point]);
+
+  return null;
+}

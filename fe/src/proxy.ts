@@ -7,7 +7,6 @@ const isSignedInRoute = createRouteMatcher([
   "/admin/dashboard(.*)",
 ])
 
-const isOwnerRoute = createRouteMatcher(["/admin(.*)", "/admin/dashboard(.*)"])
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, redirectToSignIn } = await auth()

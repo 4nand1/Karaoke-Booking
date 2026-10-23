@@ -1,407 +1,182 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { useAuth } from "@clerk/nextjs"
+import { useState } from "react"
 import { BedDouble, Edit3, Plus, Trash2, Users } from "lucide-react"
-import { apiRootUrl } from "@/lib/api-url"
+import { toast } from "sonner"
+
 import { ImageUploadField } from "@/components/ui/image-upload-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { api, apiError } from "@/lib/axios"
+import { useLanguage } from "@/lib/language"
+import { formatMNT } from "@/lib/venue"
+import { cn } from "@/lib/utils"
+import type { RegisteredKaraoke } from "./AdminRegister"
 
-type Room = {
-  _id: string
-  name: string
-  type: "VIP" | "Medium" | "Small"
-  price: number
-  capacity: number
-  image: string
-  isAvailable: boolean
-}
+type Room = NonNullable<RegisteredKaraoke["rooms"]>[number]
+type Form = { name: string; type: Room["type"]; price: string; capacity: string; image: string }
 
-type Karaoke = {
-  _id: string
-  rooms: Room[]
-  menu: unknown[]
-  name: string
-  address: string
-  city: string
-  phone: string
-  description: string
-  openingTime: string
-  closingTime: string
-}
+const emptyForm: Form = { name: "", type: "Small", price: "", capacity: "", image: "" }
+const TYPES: Room["type"][] = ["Small", "Medium", "VIP"]
+const digits = (value: string) => value.replace(/\D/g, "")
 
-type FormState = {
-  name: string
-  type: Room["type"]
-  price: string
-  capacity: string
-  image: string
-}
-
-const emptyForm: FormState = {
-  name: "",
-  type: "Small",
-  price: "",
-  capacity: "",
-  image: "",
-}
-
-function formatNumberInput(value: string) {
-  const digits = value.replace(/\D/g, "")
-
-  if (!digits) return ""
-
-  return Number(digits).toLocaleString()
-}
-
-export function RoomsTab({
-  karaoke,
-  onRefresh,
-}: {
-  karaoke: Karaoke
-  onRefresh: () => void
-}) {
-  const { getToken } = useAuth()
-  const [adding, setAdding] = useState(false)
+export function RoomsTab({ karaoke, onRefresh }: { karaoke: { _id: string; rooms?: Room[] }; onRefresh: () => void }) {
+  const { t } = useLanguage()
+  const rooms = karaoke.rooms ?? []
+  const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
-  const [form, setForm] = useState<FormState>(emptyForm)
-  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState<Form>(emptyForm)
+  const [saving, setSaving] = useState(false)
+  const base = `/karaoke/${karaoke._id}/rooms`
 
-  const isFormOpen = adding || Boolean(editing)
-  const roomSummary = useMemo(
-    () => ({
-      totalRooms: karaoke.rooms.length,
-      vipRooms: karaoke.rooms.filter((room) => room.type === "VIP").length,
-      avgCapacity: karaoke.rooms.length
-        ? Math.round(
-            karaoke.rooms.reduce((sum, room) => sum + room.capacity, 0) /
-              karaoke.rooms.length
-          )
-        : 0,
-    }),
-    [karaoke.rooms]
-  )
-
-  async function handleAdd() {
-    if (!form.name || !form.price || !form.capacity || !form.image) {
-      return alert("Please complete all required room fields.")
-    }
-
-    setLoading(true)
-    try {
-      const token = await getToken()
-      const res = await fetch(`${apiRootUrl}/api/karaoke/${karaoke._id}/rooms`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          rooms: [
-            {
-              ...form,
-              price: Number(form.price.replace(/,/g, "")),
-              capacity: Number(form.capacity),
-            },
-          ],
-        }),
-      })
-
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.message || "Failed to add room")
-      }
-
-      resetForm()
-      onRefresh()
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to add room")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleUpdate() {
-    if (!editing || !form.name || !form.price || !form.capacity || !form.image) {
-      return alert("Please complete all required room fields.")
-    }
-
-    setLoading(true)
-    try {
-      const token = await getToken()
-      const res = await fetch(
-        `${apiRootUrl}/api/karaoke/${karaoke._id}/rooms/${editing}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            ...form,
-            price: Number(form.price.replace(/,/g, "")),
-            capacity: Number(form.capacity),
-          }),
-        }
-      )
-
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.message || "Failed to update room")
-      }
-
-      resetForm()
-      onRefresh()
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to update room")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleDelete(roomId: string) {
-    if (!confirm("Delete this room?")) return
-
-    try {
-      const token = await getToken()
-      const res = await fetch(`${apiRootUrl}/api/karaoke/${karaoke._id}/rooms/${roomId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      if (!res.ok) {
-        throw new Error("Failed to delete room")
-      }
-
-      onRefresh()
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to delete room")
-    }
-  }
-
-  function startEdit(room: Room) {
-    setEditing(room._id)
-    setAdding(false)
-    setForm({
-      name: room.name,
-      type: room.type,
-      price: room.price.toLocaleString(),
-      capacity: String(room.capacity),
-      image: room.image,
-    })
-  }
-
-  function resetForm() {
-    setAdding(false)
+  const reset = () => {
+    setOpen(false)
     setEditing(null)
     setForm(emptyForm)
   }
 
-  const inputClassName =
-    "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-200"
-  const labelClassName =
-    "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
+  async function save() {
+    if (!form.name.trim() || !form.price || !form.capacity || !form.image) {
+      toast.error(t("Fill in name, price, capacity and a photo", "Нэр, үнэ, багтаамж, зургаа бөглөнө үү"))
+      return
+    }
+    setSaving(true)
+    const room = { ...form, name: form.name.trim(), price: Number(digits(form.price)), capacity: Number(form.capacity) }
+    try {
+      if (editing) await api.put(`${base}/${editing}`, room)
+      else await api.post(base, { rooms: [room] })
+      reset()
+      onRefresh()
+    } catch (e) {
+      toast.error(apiError(e, t("Couldn't save the room", "Өрөө хадгалж чадсангүй")))
+    } finally {
+      setSaving(false)
+    }
+  }
 
-  return (
-    <div className="space-y-6 text-slate-950 dark:text-slate-50">
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Total rooms
-          </p>
-          <p className="mt-3 text-3xl font-semibold">{roomSummary.totalRooms}</p>
+  async function patch(room: Room, update: Partial<Room>) {
+    try {
+      await api.put(`${base}/${room._id}`, update)
+      onRefresh()
+    } catch (e) {
+      toast.error(apiError(e, t("Couldn't update", "Шинэчилж чадсангүй")))
+    }
+  }
+
+  async function remove(room: Room) {
+    if (!window.confirm(t(`Delete ${room.name}?`, `${room.name}-г устгах уу?`))) return
+    try {
+      await api.delete(`${base}/${room._id}`)
+      onRefresh()
+    } catch (e) {
+      toast.error(apiError(e, t("Couldn't delete", "Устгаж чадсангүй")))
+    }
+  }
+
+  if (open) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+        <h3 className="mb-4 text-lg font-semibold">{editing ? t("Edit room", "Өрөө засах") : t("Add room", "Өрөө нэмэх")}</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="room-name">{t("Room name", "Өрөөний нэр")}</Label>
+            <Input id="room-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t("Type", "Төрөл")}</Label>
+            <div className="flex gap-2">
+              {TYPES.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  aria-pressed={form.type === type}
+                  onClick={() => setForm({ ...form, type })}
+                  className={cn(
+                    "h-11 flex-1 rounded-xl border text-sm font-medium",
+                    form.type === type ? "border-primary bg-primary/15 text-primary" : "border-border bg-card"
+                  )}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="room-price">{t("Price per hour (₮)", "Цагийн үнэ (₮)")}</Label>
+            <Input
+              id="room-price"
+              inputMode="numeric"
+              value={form.price}
+              onChange={(e) => setForm({ ...form, price: digits(e.target.value) ? Number(digits(e.target.value)).toLocaleString("en-US") : "" })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="room-capacity">{t("Capacity", "Багтаамж")}</Label>
+            <Input id="room-capacity" type="number" min={1} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
+          </div>
+          <div className="md:col-span-2">
+            <ImageUploadField label={t("Photo", "Зураг")} value={form.image ? [form.image] : []} onChange={(images) => setForm({ ...form, image: images[0] ?? "" })} />
+          </div>
         </div>
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            VIP rooms
-          </p>
-          <p className="mt-3 text-3xl font-semibold">{roomSummary.vipRooms}</p>
-        </div>
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Avg capacity
-          </p>
-          <p className="mt-3 text-3xl font-semibold">{roomSummary.avgCapacity}</p>
+        <div className="mt-6 flex gap-2">
+          <Button disabled={saving} onClick={() => void save()}>{t("Save", "Хадгалах")}</Button>
+          <Button variant="ghost" onClick={reset}>{t("Cancel", "Болих")}</Button>
         </div>
       </div>
+    )
+  }
 
-      {!isFormOpen ? (
-        <>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {karaoke.rooms.map((room) => (
-              <div
-                key={room._id}
-                className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-              >
-                <div className="flex gap-4">
-                  <div className="h-24 w-24 overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
-                    {room.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={room.image}
-                        alt={room.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <BedDouble className="h-5 w-5 text-slate-400" />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-lg font-semibold">{room.name}</p>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                          {karaoke.name}
-                        </p>
-                      </div>
-                      <Badge variant="outline">{room.type}</Badge>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600 dark:text-slate-300">
-                      <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
-                        <Users className="h-4 w-4" />
-                        {room.capacity} guests
-                      </span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
-                        {room.price.toLocaleString()} MNT / hr
-                      </span>
-                    </div>
-
-                    <div className="mt-5 flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="rounded-2xl"
-                        onClick={() => startEdit(room)}
-                      >
-                        <Edit3 className="h-4 w-4" />
-                        Edit
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="rounded-2xl text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                        onClick={() => handleDelete(room._id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 lg:grid-cols-2">
+        {rooms.map((room) => (
+          <div key={room._id} className={cn("flex gap-4 rounded-2xl border border-border bg-card p-4", !room.isAvailable && "opacity-60")}>
+            {room.image ? (
+              <img src={room.image} alt="" className="size-24 shrink-0 rounded-xl object-cover" loading="lazy" />
+            ) : (
+              <span className="flex size-24 shrink-0 items-center justify-center rounded-xl bg-muted"><BedDouble className="size-5 text-muted-foreground" /></span>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <p className="truncate text-lg font-semibold">{room.name}</p>
+                <Badge variant="outline">{room.type}</Badge>
               </div>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="flex w-full items-center justify-center gap-3 rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-5 text-sm font-semibold text-slate-700 transition hover:border-slate-950 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-100 dark:hover:bg-slate-900"
-          >
-            <Plus className="h-4 w-4" />
-            Add new room
-          </button>
-        </>
-      ) : (
-        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                {editing ? "Edit room" : "New room"}
+              <p className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1"><Users className="size-4" />{room.capacity}</span>
+                <span className="tabular-nums">{formatMNT(room.price)}{t(" / hr", " / цаг")}</span>
               </p>
-              <h3 className="mt-2 text-2xl font-semibold">
-                {editing ? "Update room details" : "Add a room"}
-              </h3>
-            </div>
-            <Button type="button" variant="outline" onClick={resetForm} className="rounded-2xl">
-              Cancel
-            </Button>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-2">
-            <div>
-              <label className={labelClassName}>Room name</label>
-              <input
-                value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                className={inputClassName}
-                placeholder="VIP Gold"
-              />
-            </div>
-            <div>
-              <label className={labelClassName}>Room type</label>
-              <select
-                value={form.type}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    type: e.target.value as Room["type"],
-                  }))
-                }
-                className={inputClassName}
-              >
-                <option value="VIP">VIP</option>
-                <option value="Medium">Medium</option>
-                <option value="Small">Small</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelClassName}>Price per hour</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={form.price}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    price: formatNumberInput(e.target.value),
-                  }))
-                }
-                className={inputClassName}
-                placeholder="50000"
-              />
-            </div>
-            <div>
-              <label className={labelClassName}>Capacity</label>
-              <input
-                type="number"
-                value={form.capacity}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, capacity: e.target.value }))
-                }
-                className={inputClassName}
-                placeholder="10"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <ImageUploadField
-                label="Room image"
-                value={form.image ? [form.image] : []}
-                onChange={(images) =>
-                  setForm((prev) => ({ ...prev, image: images[0] ?? "" }))
-                }
-                required
-                helperText="Upload one image to represent this room."
-              />
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => patch(room, { isAvailable: !room.isAvailable })}>
+                  {room.isAvailable ? t("Visible", "Харагдана") : t("Hidden", "Нуугдсан")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditing(room._id)
+                    setForm({ name: room.name, type: room.type, price: room.price.toLocaleString("en-US"), capacity: String(room.capacity), image: room.image })
+                    setOpen(true)
+                  }}
+                >
+                  <Edit3 /> {t("Edit", "Засах")}
+                </Button>
+                <Button size="icon-sm" variant="ghost" aria-label={t("Delete", "Устгах")} onClick={() => void remove(room)}>
+                  <Trash2 className="text-destructive" />
+                </Button>
+              </div>
             </div>
           </div>
-
-          <div className="mt-6 flex justify-end">
-            <Button
-              type="button"
-              onClick={editing ? handleUpdate : handleAdd}
-              disabled={loading}
-              className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
-            >
-              {loading ? "Saving..." : editing ? "Save changes" : "Create room"}
-            </Button>
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted px-6 py-5 text-sm font-semibold transition-colors hover:border-primary/50"
+      >
+        <Plus className="size-4" /> {t("Add room", "Өрөө нэмэх")}
+      </button>
     </div>
   )
 }
