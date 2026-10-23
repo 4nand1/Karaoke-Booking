@@ -1,4 +1,4 @@
-import { Schema, Types, model, models } from "mongoose"
+import { Schema, Types, model, models, type Model } from "mongoose"
 import { IRoom, roomSchema } from "./Room"
 import { IMenuItem, menuItemSchema } from "./MenuItem"
 
@@ -69,6 +69,4 @@ const karaokeSchema = new Schema<IKaraoke>(
 )
 
 export const KaraokeModel =
-  models.Karaoke || model<IKaraoke>("Karaoke", karaokeSchema)
-
-export const Karaoke = KaraokeModel
+  (models.Karaoke as Model<IKaraoke>) || model<IKaraoke>("Karaoke", karaokeSchema)

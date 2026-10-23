@@ -1,213 +1,202 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useAuth } from "@clerk/nextjs"
-import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { Suspense, useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { CalendarDays } from "lucide-react"
+import { toast } from "sonner"
+
+import Navbar from "@/_components/client/navbar"
+import Footer from "@/_components/client/Footer"
+import { PaymentBadge, StatusBadge } from "@/_components/client/StatusBadge"
 import {
-  CalendarDays,
-  Clock3,
-  CircleCheck,
-  CreditCard,
-  MapPin,
-  Mic2,
-  Music4,
-  Users,
-} from "lucide-react"
-import { api } from "@/lib/axios"
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
+import { api, apiError } from "@/lib/axios"
+import { useLanguage } from "@/lib/language"
+import { formatDate, formatMNT, localDate } from "@/lib/venue"
 
 type Booking = {
   _id: string
-  customerName?: string
-  karaokeId?: string
-  karaokeName?: string
-  karaokeAddress?: string
-  karaokeCity?: string
+  karaokeId: string
+  karaokeName: string
   karaokeImage?: string
-  roomId?: string
   roomName?: string
-  roomType?: string
-  roomPrice?: number | null
-  roomCapacity?: number | null
-  roomImage?: string
-  bookingDate?: string
-  bookingSlots?: string[]
   guestCount?: number
-  totalAmount?: number
-  status?: "pending" | "confirmed" | "cancelled"
-  paymentStatus?: "unpaid" | "paid" | "refunded"
-  createdAt?: string
+  bookingDate: string
+  bookingSlots: string[]
+  totalAmount: number
+  status: string
+  paymentStatus: string
 }
 
-export default function MyBookingsPage() {
-  const router = useRouter()
-  const { isLoaded, isSignedIn, getToken } = useAuth()
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [paymentSuccess, setPaymentSuccess] = useState(false)
+function BookingRow({ b, upcoming, onChange }: { b: Booking; upcoming: boolean; onChange: (b: Booking) => void }) {
+  const { t, language } = useLanguage()
+  const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
+  const canPay = upcoming && b.status === "pending" && b.paymentStatus === "unpaid" && b.totalAmount > 0
+  const canCancel = upcoming && b.status !== "cancelled" && b.paymentStatus !== "paid"
 
-    const params = new URLSearchParams(window.location.search)
-    setPaymentSuccess(params.get("payment") === "success")
-  }, [])
-
-  useEffect(() => {
-    if (!isLoaded) return
-
-    if (!isSignedIn) {
-      router.replace("/sign-in")
-      return
+  async function pay() {
+    setBusy(true)
+    try {
+      const { data } = await api.post("/payments/create-checkout-session", { bookingId: b._id })
+      window.location.assign(data.url)
+    } catch (e) {
+      toast.error(apiError(e, t("Payment is unavailable right now", "Төлбөр одоогоор боломжгүй")))
+      setBusy(false)
     }
+  }
 
-    const fetchBookings = async () => {
-      try {
-        setLoading(true)
-        setError("")
-
-        const token = await getToken()
-        const response = await fetch(`${api.defaults.baseURL}/orders?scope=my`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        })
-
-        if (!response.ok) {
-          throw new Error("Failed to load your bookings")
-        }
-
-        const data = (await response.json()) as Booking[]
-        setBookings(Array.isArray(data) ? data : [])
-      } catch (fetchError) {
-        setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : "Failed to load your bookings"
-        )
-      } finally {
-        setLoading(false)
-      }
+  async function cancel() {
+    try {
+      await api.put(`/orders/${b._id}`, { status: "cancelled" })
+      onChange({ ...b, status: "cancelled" })
+      toast.success(t("Booking cancelled", "Захиалга цуцлагдлаа"))
+    } catch (e) {
+      toast.error(apiError(e, t("Couldn't cancel", "Цуцалж чадсангүй")))
     }
-
-    void fetchBookings()
-  }, [getToken, isLoaded, isSignedIn, router])
+  }
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <div className="rounded-2xl border p-6">
-        <h1 className="text-xl font-bold">My Bookings</h1>
+    <article className="flex gap-4 rounded-2xl border border-border bg-card p-4">
+      <img
+        src={b.karaokeImage || "/karaoke.jpg"}
+        alt=""
+        className="size-20 shrink-0 rounded-xl object-cover sm:size-24"
+        loading="lazy"
+      />
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate font-semibold">{b.karaokeName}</h3>
+        <p className="text-sm tabular-nums text-muted-foreground">
+          {formatDate(b.bookingDate, language)} · {b.bookingSlots.join(", ")}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {b.roomName} · {t(`${b.guestCount ?? 1} guests`, `${b.guestCount ?? 1} хүн`)}
+        </p>
+        <p className="mt-1 font-display tabular-nums">{formatMNT(b.totalAmount)}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <StatusBadge status={b.status} />
+          <PaymentBadge status={b.paymentStatus} />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {canPay && (
+            <Button size="sm" disabled={busy} onClick={() => void pay()}>
+              {t("Pay now", "Төлөх")}
+            </Button>
+          )}
+          {canCancel && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="outline">{t("Cancel", "Цуцлах")}</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("Cancel this booking?", "Захиалгыг цуцлах уу?")}</AlertDialogTitle>
+                  <AlertDialogDescription>{t("The time slot will be released.", "Цаг чөлөөлөгдөнө.")}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("Keep it", "Болих")}</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void cancel()}>{t("Cancel booking", "Цуцлах")}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          <Button size="sm" variant="ghost" asChild>
+            <Link href={`/book/${b.karaokeId}`}>{t("Venue", "Караоке")}</Link>
+          </Button>
+        </div>
+      </div>
+    </article>
+  )
+}
 
-        {paymentSuccess ? (
-          <div className="mt-4 rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-600">
-            Your Stripe payment was successful and your booking is now confirmed.
-          </div>
-        ) : null}
+function MyBookingsContent() {
+  const { t } = useLanguage()
+  const paid = useSearchParams().get("payment") === "success"
+  const [bookings, setBookings] = useState<Booking[] | null>(null)
+  const [failed, setFailed] = useState(false)
 
-        {loading ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            Loading your bookings...
-          </p>
-        ) : error ? (
-          <p className="mt-4 text-sm text-red-500">{error}</p>
+  useEffect(() => {
+    api
+      .get<Booking[]>("/orders", { params: { scope: "my" } })
+      .then((res) => setBookings(res.data))
+      .catch(() => setFailed(true))
+  }, [])
+
+  const { upcoming, past } = useMemo(() => {
+    const today = localDate()
+    const all = bookings ?? []
+    // ponytail: by calendar date; after-midnight slots count as the night they started
+    const isUpcoming = (b: Booking) => b.status !== "cancelled" && b.bookingDate >= today
+    return {
+      upcoming: all.filter(isUpcoming).sort((a, b) => a.bookingDate.localeCompare(b.bookingDate)),
+      past: all.filter((b) => !isUpcoming(b)),
+    }
+  }, [bookings])
+
+  const replace = (next: Booking) => setBookings((prev) => (prev ?? []).map((b) => (b._id === next._id ? next : b)))
+
+  return (
+    <main id="main" className="wrap max-w-3xl pb-16 pt-24">
+      <h1 className="font-display text-3xl font-semibold">{t("My bookings", "Миний захиалгууд")}</h1>
+
+      {paid && (
+        <p className="mt-4 rounded-xl bg-live/15 p-3 text-sm text-live">
+          {t("Payment received — you're booked.", "Төлбөр амжилттай — захиалга баталгаажлаа.")}
+        </p>
+      )}
+
+      <div className="mt-6 space-y-3">
+        {failed ? (
+          <p className="text-destructive">{t("Couldn't load your bookings", "Захиалгуудыг ачаалж чадсангүй")}</p>
+        ) : bookings === null ? (
+          Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-36 rounded-2xl" />)
         ) : bookings.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            Booking history will appear here.
-          </p>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon"><CalendarDays /></EmptyMedia>
+              <EmptyTitle>{t("No bookings yet", "Захиалга алга")}</EmptyTitle>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button asChild><Link href="/">{t("Find a venue", "Караоке хайх")}</Link></Button>
+            </EmptyContent>
+          </Empty>
         ) : (
-          <div className="mt-6 space-y-4">
-            {bookings.map((booking) => (
-              <div key={booking._id} className="overflow-hidden rounded-2xl border bg-card">
-                <div className="grid md:grid-cols-[220px_1fr]">
-                  <div className="relative min-h-48 bg-muted">
-                    <Image
-                      src={booking.karaokeImage || booking.roomImage || "/karaoke.jpg"}
-                      alt={booking.karaokeName || "Booked karaoke"}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 220px"
-                    />
-                  </div>
-
-                  <div className="p-4">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-xs font-black uppercase tracking-[0.2em] text-primary/70">
-                            Booked karaoke
-                          </p>
-                          <p className="mt-1 text-xl font-semibold">
-                            {booking.karaokeName || "Your karaoke booking"}
-                          </p>
-                          {(booking.karaokeAddress || booking.karaokeCity) && (
-                            <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                              <MapPin className="h-4 w-4" />
-                              {[booking.karaokeAddress, booking.karaokeCity]
-                                .filter(Boolean)
-                                .join(", ")}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                          <span className="flex items-center gap-2">
-                            <Mic2 className="h-4 w-4" />
-                            {booking.roomName
-                              ? `${booking.roomName}${booking.roomType ? ` · ${booking.roomType}` : ""}`
-                              : "Room info unavailable"}
-                          </span>
-                          <span className="flex items-center gap-2">
-                            <CalendarDays className="h-4 w-4" />
-                            {booking.bookingDate || "Date not set"}
-                          </span>
-                          <span className="flex items-center gap-2">
-                            <Clock3 className="h-4 w-4" />
-                            {booking.bookingSlots?.join(", ") || "No time slots"}
-                          </span>
-                          <span className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            {booking.guestCount || 1} guest(s)
-                          </span>
-                          {booking.roomCapacity ? (
-                            <span className="flex items-center gap-2">
-                              <Music4 className="h-4 w-4" />
-                              Capacity {booking.roomCapacity}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <div className="space-y-3 text-sm sm:text-right">
-                        <div className="flex flex-wrap gap-2 sm:justify-end">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-primary">
-                            <CircleCheck className="h-4 w-4" />
-                            {booking.status || "pending"}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-3 py-1 text-green-600">
-                            <CreditCard className="h-4 w-4" />
-                            {booking.paymentStatus || "unpaid"}
-                          </span>
-                        </div>
-                        <p className="font-semibold text-foreground">
-                          ₮{(booking.totalAmount ?? 0).toLocaleString()}
-                        </p>
-                        {booking.karaokeId ? (
-                          <Link
-                            href={`/book/${booking.karaokeId}`}
-                            className="inline-flex rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-accent"
-                          >
-                            View booking page
-                          </Link>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <>
+            {upcoming.map((b) => <BookingRow key={b._id} b={b} upcoming onChange={replace} />)}
+            {past.length > 0 && (
+              <>
+                <h2 className="pt-6 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t("Past", "Өнгөрсөн")}</h2>
+                {past.map((b) => <BookingRow key={b._id} b={b} upcoming={false} onChange={replace} />)}
+              </>
+            )}
+          </>
         )}
       </div>
     </main>
+  )
+}
+
+export default function MyBookingsPage() {
+  return (
+    <>
+      <Navbar />
+      <Suspense>
+        <MyBookingsContent />
+      </Suspense>
+      <Footer />
+    </>
   )
 }

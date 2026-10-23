@@ -11,7 +11,6 @@ type ImageUploadFieldProps = {
   multiple?: boolean
   required?: boolean
   helperText?: string
-  theme?: "dark" | "light"
   maxFiles?: number
 }
 
@@ -22,37 +21,23 @@ export function ImageUploadField({
   multiple = false,
   required = false,
   helperText,
-  theme = "light",
   maxFiles = multiple ? 6 : 1,
 }: ImageUploadFieldProps) {
   const inputId = useId()
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState("")
 
-  const tone =
-    theme === "dark"
-      ? {
-          label: "mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-white/40",
-          picker:
-            "flex min-h-28 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/30 px-4 py-5 text-center text-sm text-white/60 transition-all hover:border-purple-500/50 hover:text-white",
-          hint: "mt-2 text-xs text-white/35",
-          previewWrap: "mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3",
-          previewCard: "relative overflow-hidden rounded-2xl border border-white/10 bg-black/30",
-          remove:
-            "absolute right-2 top-2 rounded-full bg-black/70 p-1 text-white/80 transition hover:bg-red-500 hover:text-white",
-          error: "mt-2 text-xs text-red-400",
-        }
-      : {
-          label: "mb-2 block text-sm font-medium text-foreground",
-          picker:
-            "flex min-h-28 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground transition-all hover:border-primary/40 hover:text-foreground",
-          hint: "mt-2 text-xs text-muted-foreground",
-          previewWrap: "mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3",
-          previewCard: "relative overflow-hidden rounded-lg border border-border bg-background",
-          remove:
-            "absolute right-2 top-2 rounded-full bg-black/70 p-1 text-white transition hover:bg-red-500",
-          error: "mt-2 text-xs text-red-500",
-        }
+  const tone = {
+    label: "mb-2 block text-sm font-medium text-foreground",
+    picker:
+      "flex min-h-28 cursor-pointer items-center justify-center rounded-xl border border-dashed border-border bg-muted px-4 py-5 text-center text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground",
+    hint: "mt-2 text-xs text-muted-foreground",
+    previewWrap: "mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3",
+    previewCard: "relative overflow-hidden rounded-xl border border-border bg-card",
+    remove:
+      "absolute right-2 top-2 rounded-full bg-background/80 p-1 text-foreground transition hover:bg-destructive hover:text-white",
+    error: "mt-2 text-xs text-destructive",
+  }
 
   async function handleFiles(files: FileList | null) {
     if (!files?.length) return

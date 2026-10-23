@@ -12,7 +12,7 @@ export interface IMenuItem {
 export const menuItemSchema = new Schema<IMenuItem>({
   name: { type: String, required: true },
   category: { type: String, enum: ["food", "drink", "set"], required: true },
-  price: { type: Number, required: true },
+  price: { type: Number, required: true, min: 0 },
   description: { type: String, default: null },
   image: { type: String, default: null },
   isAvailable: { type: Boolean, default: true },

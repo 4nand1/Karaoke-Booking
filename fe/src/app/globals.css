@@ -7,21 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-unbounded), var(--font-manrope), sans-serif;
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -38,6 +25,10 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-live: var(--live);
+  --color-warning: var(--warning);
+  --shadow-card: var(--card-shadow);
+  --shadow-glow: 0 10px 32px -12px color-mix(in oklab, var(--primary) 70%, transparent);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -49,84 +40,51 @@
 
 :root {
   --radius: 0.75rem;
-
-  --background: oklch(0.98 0.01 20);
-  --foreground: oklch(0.18 0.02 285);
-
+  --background: oklch(0.985 0.004 85);
+  --foreground: oklch(0.19 0.015 20);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 285);
-
+  --card-foreground: oklch(0.19 0.015 20);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 285);
-
-  --primary: oklch(0.71 0.26 356);
-  --primary-foreground: oklch(0.99 0 0);
-
-  --secondary: oklch(0.95 0.01 285);
-  --secondary-foreground: oklch(0.22 0.02 285);
-
-  --muted: oklch(0.96 0.01 285);
-  --muted-foreground: oklch(0.55 0.02 285);
-
-  --accent: oklch(0.64 0.22 305);
-  --accent-foreground: oklch(0.99 0 0);
-
-  --destructive: oklch(0.58 0.24 28);
-  --border: oklch(0.9 0.01 285);
-  --input: oklch(0.9 0.01 285);
-  --ring: oklch(0.71 0.26 356);
-
-  --chart-1: oklch(0.71 0.26 356);
-  --chart-2: oklch(0.64 0.22 305);
-  --chart-3: oklch(0.68 0.2 250);
-  --chart-4: oklch(0.78 0.16 30);
-  --chart-5: oklch(0.7 0.18 120);
-
-  --sidebar: oklch(0.99 0 0);
-  --sidebar-foreground: oklch(0.18 0.02 285);
-  --sidebar-primary: oklch(0.71 0.26 356);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.95 0.01 285);
-  --sidebar-accent-foreground: oklch(0.22 0.02 285);
-  --sidebar-border: oklch(0.9 0.01 285);
-  --sidebar-ring: oklch(0.71 0.26 356);
+  --popover-foreground: oklch(0.19 0.015 20);
+  --primary: oklch(0.57 0.24 1);
+  --primary-foreground: oklch(0.99 0.005 0);
+  --secondary: oklch(0.95 0.006 60);
+  --secondary-foreground: oklch(0.22 0.015 20);
+  --muted: oklch(0.955 0.006 60);
+  --muted-foreground: oklch(0.47 0.015 30);
+  --accent: oklch(0.94 0.008 60);
+  --accent-foreground: oklch(0.19 0.015 20);
+  --destructive: oklch(0.55 0.22 27);
+  --border: oklch(0.19 0.015 20 / 0.11);
+  --input: oklch(0.19 0.015 20 / 0.16);
+  --ring: oklch(0.57 0.24 1);
+  --live: oklch(0.52 0.14 145);
+  --warning: oklch(0.56 0.13 60);
+  --card-shadow: 0 1px 2px oklch(0.2 0.02 20 / 0.05), 0 12px 32px -16px oklch(0.2 0.02 20 / 0.18);
 }
 
 .dark {
-  --background: #0d0d12;
-  --foreground: #f5f5f5;
-
-  --card: #16161d;
-  --card-foreground: #f5f5f5;
-
-  --popover: #16161d;
-  --popover-foreground: #f5f5f5;
-
-  --primary: #ff3399;
-  --primary-foreground: #ffffff;
-
-  --secondary: #1d1d26;
-  --secondary-foreground: #f0f0f0;
-
-  --muted: #1d1d26;
-  --muted-foreground: #9ca3af;
-
-  --accent: #8b5cf6;
-  --accent-foreground: #ffffff;
-
-  --destructive: #dc2626;
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.1);
-  --ring: #ff3399;
-
-  --sidebar: #16161d;
-  --sidebar-foreground: #f5f5f5;
-  --sidebar-primary: #ff3399;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1d1d26;
-  --sidebar-accent-foreground: #f5f5f5;
-  --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #ff3399;
+  --background: oklch(0.155 0.012 15);
+  --foreground: oklch(0.965 0.008 80);
+  --card: oklch(0.195 0.014 15);
+  --card-foreground: oklch(0.965 0.008 80);
+  --popover: oklch(0.215 0.015 15);
+  --popover-foreground: oklch(0.965 0.008 80);
+  --primary: oklch(0.72 0.22 355);
+  --primary-foreground: oklch(0.16 0.02 355);
+  --secondary: oklch(0.25 0.014 15);
+  --secondary-foreground: oklch(0.965 0.008 80);
+  --muted: oklch(0.235 0.013 15);
+  --muted-foreground: oklch(0.72 0.014 60);
+  --accent: oklch(0.27 0.015 15);
+  --accent-foreground: oklch(0.965 0.008 80);
+  --destructive: oklch(0.66 0.21 25);
+  --border: oklch(1 0 0 / 0.09);
+  --input: oklch(1 0 0 / 0.13);
+  --ring: oklch(0.72 0.22 355);
+  --live: oklch(0.88 0.2 130);
+  --warning: oklch(0.84 0.15 80);
+  --card-shadow: 0 0 0 1px oklch(1 0 0 / 0.02), 0 16px 40px -20px oklch(0 0 0 / 0.7);
 }
 
 @layer base {
@@ -146,120 +104,67 @@
     cursor: not-allowed;
   }
   .leaflet-container {
-    @apply !bg-card !font-[inherit];
-  }
-  .leaflet-container a {
-    @apply !text-inherit;
+    background: var(--card);
+    font: inherit;
+    width: 100%;
+    height: 100%;
   }
   .leaflet-div-icon {
-    @apply !bg-transparent !border-none;
-  }
-  .leaflet-popup-content-wrapper, .leaflet-popup-content, .leaflet-popup-content p {
-    @apply ![all:unset];
-  }
-  .leaflet-popup {
-    @apply !animate-none;
-  }
-  .leaflet-popup-close-button {
-    @apply ring-offset-background focus:ring-ring bg-secondary rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:outline-hidden;
-  }
-  .leaflet-tooltip, .leaflet-draw-tooltip {
-    @apply !bg-foreground !text-background !animate-none !rounded-md !border-none !p-0 !px-3 !py-1.5 !shadow-none;
-  }
-  .leaflet-draw-tooltip:before {
-    @apply bg-foreground !top-1/2 !right-0.5 size-2.5 translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[2px] !border-none;
-  }
-  .leaflet-error-draw-tooltip {
-    @apply !bg-destructive !text-white;
-  }
-  .leaflet-error-draw-tooltip:before {
-    @apply bg-destructive;
-  }
-  .leaflet-draw-tooltip-subtext {
-    @apply !text-background;
-  }
-  .leaflet-popup-tip-container, .leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before, .leaflet-tooltip-left:before, .leaflet-tooltip-right:before {
-    @apply hidden;
-  }
-  .leaflet-control-attribution {
-    @apply !bg-muted rounded-md !px-[4px] !py-[2px] text-[10px] !leading-none !text-inherit;
-  }
-  .leaflet-draw-guide-dash {
-    @apply rounded-full;
-  }
-  .leaflet-edit-marker-selected {
-    @apply !border-transparent !bg-transparent;
-  }
-  .marker-cluster div {
-    @apply font-[inherit];
+    background: transparent;
+    border: 0;
   }
 }
 
-@layer utilities {
-  .glass {
-    background: color-mix(in oklab, var(--color-card) 75%, transparent);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent);
-  }
-
-  .neon-glow {
-    box-shadow:
-      0 0 15px rgba(255, 51, 153, 0.35),
-      0 0 45px rgba(255, 51, 153, 0.15);
-  }
-
-  .gradient-hero {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 51, 153, 0.8) 0%,
-      rgba(168, 85, 247, 0.6) 50%,
-      rgba(59, 130, 246, 0.4) 100%
-    );
-  }
-
- 
-
-
-.leaflet-container {
+@utility wrap {
+  margin-inline: auto;
   width: 100%;
-  height: 100%;
+  max-width: 72rem;
+  padding-inline: 1rem;
+  @media (width >= 40rem) {
+    padding-inline: 1.5rem;
+  }
 }
 
-.karaoke-marker {
-  width: 18px;
-  height: 18px;
-  border-radius: 9999px;
-  background: hsl(var(--primary));
-  border: 2px solid hsl(var(--background));
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
-.karaoke-marker-active {
-  width: 24px;
-  height: 24px;
-  border-radius: 9999px;
-  background: hsl(var(--primary));
-  border: 4px solid hsl(var(--background));
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+.eq > span {
+  width: 3px;
+  border-radius: 1px;
+  background: currentColor;
+  animation: eq 0.9s ease-in-out infinite;
+}
+.eq > span:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.eq > span:nth-child(3) {
+  animation-delay: -0.6s;
+}
+@keyframes eq {
+  0%,
+  100% {
+    height: 30%;
+  }
+  50% {
+    height: 100%;
+  }
 }
 
-.user-location-marker {
-  position: relative;
-  width: 28px;
-  height: 28px;
-  border-radius: 9999px;
-  background: hsl(var(--chart-2));
-  border: 4px solid hsl(var(--background));
-  box-shadow: 0 0 0 8px color-mix(in srgb, hsl(var(--chart-2)) 24%, transparent);
-}
-
-.user-location-marker::after {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border-radius: 9999px;
-  background: hsl(var(--background));
-}
-
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

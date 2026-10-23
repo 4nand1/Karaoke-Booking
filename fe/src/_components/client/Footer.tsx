@@ -1,46 +1,40 @@
- "use client";
+"use client"
 
-import { Mic } from "lucide-react";
-import { useLanguage } from "@/lib/language";
+import Link from "next/link"
+import { Mic } from "lucide-react"
+import { useLanguage } from "@/lib/language"
 
-const Footer = () => {
-  const { language } = useLanguage();
-
-  const copy =
-    language === "MN"
-      ? {
-          description:
-            "Хотынхоо хамгийн гоё караоке өрөөг хайж, харьцуулж, захиалаарай. Төгс үдэш эндээс эхэлнэ.",
-          rights: "© 2026 KaraokeNow. Бүх эрх хуулиар хамгаалагдсан.",
-        }
-      : {
-          description:
-            "Find, compare, and book the best karaoke rooms in your city. Your perfect night out starts here.",
-          rights: "© 2026 KaraokeNow. All rights reserved.",
-        };
+export default function Footer() {
+  const { t } = useLanguage()
 
   return (
-    <footer className="border-t border-border bg-card py-12">
-      <div className="container mx-auto px-6">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Mic className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-display text-lg font-bold text-foreground">
+    <footer className="border-t border-border py-10">
+      <div className="wrap flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <div className="max-w-sm space-y-3">
+          <Link href="/" className="flex items-center gap-2" aria-label="KaraokeNow">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Mic className="size-4" />
+            </span>
+            <span className="font-display font-semibold">
               Karaoke<span className="text-primary">Now</span>
             </span>
-          </div>
-          <p className="max-w-md text-sm text-muted-foreground">
-            {copy.description}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {copy.rights}
+          </Link>
+          <p className="text-sm text-muted-foreground">
+            {t(
+              "Find, compare, and book karaoke rooms in your city. Your perfect night out starts here.",
+              "Хотынхоо караоке өрөөг хайж, харьцуулж, захиалаарай. Төгс үдэш эндээс эхэлнэ."
+            )}
           </p>
         </div>
+        <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground" aria-label="Footer">
+          <Link href="/map" className="hover:text-foreground">{t("Map", "Газрын зураг")}</Link>
+          <Link href="/sign-up?role=admin" className="hover:text-foreground">{t("List your venue", "Караокегоо бүртгүүлэх")}</Link>
+          <Link href="/my-bookings" className="hover:text-foreground">{t("My bookings", "Миний захиалгууд")}</Link>
+        </nav>
+        <p className="text-xs text-muted-foreground">
+          {t("© 2026 KaraokeNow. All rights reserved.", "© 2026 KaraokeNow. Бүх эрх хуулиар хамгаалагдсан.")}
+        </p>
       </div>
     </footer>
-  );
-};
-
-export default Footer;
+  )
+}

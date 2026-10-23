@@ -1,106 +1,63 @@
-import dotenv from "dotenv";
-dotenv.config();
+import dotenv from "dotenv"
+dotenv.config()
 
-import express from "express";
-import cors from "cors";
-import { clerkMiddleware } from "@clerk/express";
+import express from "express"
+import cors from "cors"
+import { clerkMiddleware } from "@clerk/express"
 
-import { connectDB } from "./config/db";
+import { connectDB } from "./config/db"
+import { errorHandler } from "./lib/http"
+import meRoutes from "./routes/me"
+import onboardingRoutes from "./routes/onboarding"
+import karaokeRoutes from "./routes/karaoke"
+import orderRoutes from "./routes/orders"
+import paymentRoutes from "./routes/payments"
+import reviewRoutes from "./routes/reviews"
 
-import authRoutes from "./routes/auth.routes";
-import onboardingRoutes from "./routes/onboarding.routes";
-import { CategoryRouter } from "./routes/category.router";
-import { MenuRouter } from "./routes/menuRouter";
-import reviewRouter from "./routes/review.routes";
-import { KaraokeRouter } from "./routes/karaokeRoutes";
-import bookingRoutes from "./routes/booking.routes";
-import { OrderRouter } from "./routes/order.router";
-import paymentRouter from "./routes/payment.routes";
-
-const app = express();
-const clientUrl = process.env.CLIENT_URL?.trim() || "http://localhost:3000";
-
+const secretKey = process.env.CLERK_SECRET_KEY
+if (!secretKey) throw new Error("Missing CLERK_SECRET_KEY in backend .env")
 const publishableKey =
-  process.env.CLERK_PUBLISHABLE_KEY ||
-  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-const secretKey = process.env.CLERK_SECRET_KEY;
+  process.env.CLERK_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
-if (!secretKey) {
-  throw new Error("Missing CLERK_SECRET_KEY in backend .env");
-}
+const allowedOrigins = [process.env.CLIENT_URL, process.env.FRONTEND_URL, process.env.ALLOWED_ORIGINS]
+  .flatMap((value) => String(value ?? "").split(","))
+  .map((value) => value.trim())
+  .filter(Boolean)
+if (!allowedOrigins.length) allowedOrigins.push("http://localhost:3000")
 
-if (!publishableKey) {
-  console.warn(
-    "CLERK_PUBLISHABLE_KEY is missing in backend .env, continuing with CLERK_SECRET_KEY only",
-  );
-}
+const app = express()
 
-app.use(
-  cors({
-    origin: "*",
-    credentials: true,
-  }),
-);
+app.use(cors({ origin: allowedOrigins, credentials: true }))
+app.get("/health", (_req, res) => {
+  res.json({ ok: true })
+})
 
-app.use("/api/payments", paymentRouter);
-app.use(express.json({ limit: "20mb" }));
+// Stripe webhooks need the raw body, so payments mount before express.json().
+app.use("/api/payments", paymentRoutes)
+app.use(express.json({ limit: "4mb" }))
+app.use(clerkMiddleware({ secretKey, ...(publishableKey ? { publishableKey } : {}) }))
 
-app.use(
-  clerkMiddleware({
-    secretKey,
-    ...(publishableKey ? { publishableKey } : {}),
-  }),
-);
+app.use("/api", meRoutes)
+app.use("/api/onboarding", onboardingRoutes)
+app.use("/api/reviews", reviewRoutes)
+app.use("/api/orders", orderRoutes)
+app.use("/api/karaoke", karaokeRoutes)
 
-app.use("/api", authRoutes);
-app.use("/api/onboarding", onboardingRoutes);
-app.use("/api/categories", CategoryRouter);
-app.use("/api/items", MenuRouter);
-app.use("/api/reviews", reviewRouter);
-app.use("/api/booking", bookingRoutes);
-app.use("/api/bookings", bookingRoutes);
-app.use("/karaoke", KaraokeRouter);
-app.use("/api/orders", OrderRouter);
+app.use(errorHandler)
 
-app.use(
-  (
-    err: any,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction,
-  ) => {
-    console.error("Express error:", err);
-    res.status(500).json({
-      message: err?.message || "Internal server error",
-    });
-  },
-);
+const PORT = process.env.PORT || 9000
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
 
-const PORT = process.env.PORT || 9000;
-const DB_RETRY_DELAY_MS = 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(
-    `Clerk loaded: pk=${publishableKey ? "yes" : "no"}, sk=${secretKey ? "yes" : "no"}`,
-  );
-});
-
-export default app;
-
-async function connectDatabaseWithRetry() {
-  while (true) {
+async function connectWithRetry() {
+  for (;;) {
     try {
-      await connectDB();
-      return;
+      return await connectDB()
     } catch (error) {
-      console.error(
-        `MongoDB connection failed. Retrying in ${DB_RETRY_DELAY_MS / 1000} seconds...`,
-        error,
-      );
-      await new Promise((resolve) => setTimeout(resolve, DB_RETRY_DELAY_MS));
+      console.error("MongoDB connection failed. Retrying in 5 seconds...", error)
+      await new Promise((resolve) => setTimeout(resolve, 5000))
     }
   }
 }
+void connectWithRetry()
 
-void connectDatabaseWithRetry();
+export default app
